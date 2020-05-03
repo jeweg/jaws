@@ -1,0 +1,3 @@
+[submodule "vcpkg-cmake"]
+	path = vcpkg-cmake
+	url = https://github.com/jweg/vcpkg-cmake
