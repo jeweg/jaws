@@ -1,0 +1,30 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer SSBO_A
+{
+    float inputs_a[];
+};
+
+layout(std430, set = 0, binding = 1) readonly buffer SSBO_B
+{
+    float inputs_b[];
+};
+
+layout(std430, set = 1, binding = 0) writeonly buffer SSBO
+{
+    float outputs[];
+};
+
+#include "foo.inc"
+#include "inc/bar.inc"
+
+#ifdef foo
+
+void main()
+{
+    uint ident = get_ident(); //gl_GlobalInvocationID.x;
+    outputs[ident] = inputs_a[ident] * inputs_b[ident];
+}
+
+#endif

@@ -1,0 +1,1 @@
+add_gtest_executable(test_abseil_stringview_compat main.cpp)

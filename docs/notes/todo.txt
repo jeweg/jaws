@@ -1,0 +1,1 @@
+* In the install-usage test, abseil, fmt (, etc?) are used as DLLs. Can we force them to be lined statically into jaws.dll?

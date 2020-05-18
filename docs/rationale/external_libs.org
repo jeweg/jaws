@@ -1,0 +1,21 @@
+* hash function lib
+I used xxhash at the start, but researched more b/c xxhash isn't in vcpkg.
+[[https://news.ycombinator.com/item?id=16113485]] got me to [[https://github.com/rurban/smhasher/]]
+where there are benchmarks. The gist here is that for use in a hash table, smaller (in terms of
+instructions) hash functions usually beat the larger, higher-quality ones overall.
+I remain undecided for now.
+
+* logging library
+spdlog seemed best. Its use of fmt is welcome.
+
+* benchmarking
+[[https://www.bfilipek.com/2016/01/micro-benchmarking-libraries-for-c.html#comparison]] compares (among others) celero and google benchmark. Celero seems like the clear winner.
+
+* unit tests
+gtest is a classic and I don't see a reason to use something else.
+
+
+* Boost
+Boost in its entirety is questionable. However, there are definitly useful parts. A nice middle ground seems to be the subset Google defines in its C++ coding style:
+[[https://google.github.io/styleguide/cppguide.html#Boost]]
+We could do worse than following that.

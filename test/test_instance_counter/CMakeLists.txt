@@ -1,0 +1,1 @@
+add_gtest_executable(test_instance_counter main.cpp)

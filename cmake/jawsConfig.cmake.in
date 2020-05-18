@@ -1,0 +1,24 @@
+get_filename_component(jaws_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${jaws_CMAKE_DIR})
+
+# TODO: this list is probably outdated:
+
+# find_package used because find_dependency does not support COMPONENTS or MODULE until 3.8.0 (ubuntu 16.04 version of cmake is 3.5.1)
+#find_dependency(Boost 1.55 REQUIRED COMPONENTS regex)
+#find_dependency(RapidJSON 1.0 REQUIRED MODULE)
+#find_package(Boost 1.55 REQUIRED COMPONENTS regex)
+#find_package(RapidJSON 1.0 REQUIRED MODULE)
+
+find_package(fmt CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(unofficial-abseil CONFIG REQUIRED)
+
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET jaws::jaws)
+    include("${jaws_CMAKE_DIR}/jawsTargets.cmake")
+endif()
+
+set(jaws_LIBRARIES jaws::jaws)
