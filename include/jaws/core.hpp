@@ -46,7 +46,6 @@
 #    endif
 #endif
 
-// As long as we depend on boost anyway...
 #if defined(__GNUC__)
 #    define JAWS_CURRENT_FUNCTION __PRETTY_FUNCTION__
 #elif defined(__FUNCSIG__)
@@ -57,8 +56,21 @@
 #    define JAWS_CURRENT_FUNCTION __func__
 #endif
 
-// Named parameter idiom helpers
+#if defined(__ICC)
+#define JAWS_DEPRECATED __attribute__((deprecated))
+#define JAWS_DEPRECATED_MSG __attribute__((deprecated))
+#elif defined(__GNUC__)
+#define JAWS_DEPRECATED __attribute__((deprecated))
+#define JAWS_DEPRECATED_MSG(msg) __attribte__((deprecated(msg)))
+#elif defined(_MSC_VER)
+#define JAWS_DEPRECATED __declspec(deprecated)
+#define JAWS_DEPRECATED_MSG(msg) __declspec(deprecated(msg))
+#else
+#define JAWS_DEPRECATED 
+#define JAWS_DEPRECATED_MSG(msg) 
+#endif
 
+// Named parameter idiom helpers
 namespace detail {
 
 // This wrapper trick enables using parentheses around types containing commas
