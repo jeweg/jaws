@@ -8,5 +8,5 @@ add_jaws_executable(examples ${project_name}
 	main.cpp
 )
 
-cmut_create_build_info()
+create_build_info()
 

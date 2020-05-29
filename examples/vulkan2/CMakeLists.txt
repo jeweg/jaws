@@ -13,7 +13,7 @@ add_jaws_executable(examples ${project_name}
 target_link_libraries(${project_name} PRIVATE glfw
     )
 
-cmut_create_build_info()
+create_build_info()
 
 # should be publicly exported by jaws::jaws
 #add_subdirectory(../../../../../volk volk)

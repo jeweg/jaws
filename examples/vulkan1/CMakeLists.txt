@@ -11,4 +11,4 @@ add_jaws_executable(examples ${project_name}
 )
 
 target_link_libraries(${project_name} PRIVATE glfw)
-cmut_create_build_info()
+create_build_info()

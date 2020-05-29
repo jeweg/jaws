@@ -12,29 +12,10 @@ option(BUILD_EXAMPLES "Build the examples?" ON)
 option(BUILD_TESTS "Build the tests?" ON)
 option(BUILD_EXPERIMENTS "Build the experiments?" ON)
 option(BUILD_UTILS "Build the utils?" ON)
-option(SUPPORT_OPENGL "Support for OpenGL?" ON)
-option(SUPPORT_VULKAN "Support for Vulkan?" ON)
+option(SUPPORT_OPENGL "Support for OpenGL?" OFF)
+option(SUPPORT_VULKAN "Support for Vulkan?" OFF)
 option(USE_COTIRE "Use cotire to generate a unity build?" ON)
 option(SEPARATE_HEADER_IMPL "Separate trees for header and impl files in an IDE?" OFF)
-
-if (SUPPORT_VULKAN)
-    find_package(Vulkan)
-    if (NOT TARGET Vulkan::Vulkan)
-        message("Vulkan not found, disabling Vulkan support.")
-        set(SUPPORT_VULKAN OFF)
-    endif()
-endif()
-
-if (SUPPORT_OPENGL)
-    find_package(OpenGL)
-    if (NOT OpenGL_FOUND)
-        message("OpenGL not found, disabling OpenGL support.")
-        set(SUPPORT_OPENGL OFF)
-    else()
-        # TODO: maybe separate logic dependiing on
-        # whether we hav GLVND or not, etc.
-    endif()
-endif()
 
 ####################################################
 # Vcpkg orchestration
@@ -42,7 +23,10 @@ endif()
 
 # Note that this section sets CMAKE_TOOLCHAIN_FILE, so it must go before project().
 include(vcpkg-cmake/vcpkg_cmake.cmake)
-vcpkg_cmake_begin(VCPKG_DIR 3rd_party/vcpkg)
+vcpkg_cmake_begin(
+    VCPKG_DIR 3rd_party/vcpkg
+    REPO_URL https://github.com/jweg/vcpkg
+)
 vcpkg_cmake_package(fmt)
 vcpkg_cmake_package(glm)
 vcpkg_cmake_package(spdlog)
@@ -52,7 +36,7 @@ vcpkg_cmake_package(xxhash)
 if (SUPPORT_VULKAN)
     vcpkg_cmake_package(volk)
     vcpkg_cmake_package(rapidjson)
-    vcpkg_cmake_package(spirv_cross)
+    vcpkg_cmake_package(spirv-cross)
     vcpkg_cmake_package(vulkan-memory-allocator)
     vcpkg_cmake_package(shaderc)
 endif()
@@ -107,6 +91,29 @@ set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL "RELEASE" "")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Unfortunately we cannot do this before the vcpkg package declarations.
+# That's because vcpkg must go before the call to project(), but FindVulkan
+# reqruires CMAKE_SIZEOF_VOID_P set which is only set after project().
+if (SUPPORT_VULKAN)
+    find_package(Vulkan)
+    if (NOT TARGET Vulkan::Vulkan)
+        message("Vulkan not found, disabling Vulkan support.")
+        set(SUPPORT_VULKAN OFF)
+    endif()
+endif()
+
+if (SUPPORT_OPENGL)
+    find_package(OpenGL)
+    if (NOT OpenGL_FOUND)
+        message("OpenGL not found, disabling OpenGL support.")
+        set(SUPPORT_OPENGL OFF)
+    else()
+        # TODO: maybe separate logic dependiing on
+        # whether we hav GLVND or not, etc.
+    endif()
+endif()
+
 
 #################################################################################
 # The jaws library
@@ -342,6 +349,9 @@ PUBLIC
 PRIVATE
 )
 if (SUPPORT_VULKAN)
+
+	find_package(volk CONFIG REQUIRED)
+
     target_link_libraries(jaws
     PUBLIC
         # For now make most stuff public so we can experiment in examples.
@@ -448,6 +458,20 @@ function (add_jaws_executable folder target)
         $<$<CXX_COMPILER_ID:MSVC>:-wd4251> # "needs to have DLL interface..." -- but mind https://stackoverflow.com/a/5664491
         $<$<CXX_COMPILER_ID:GNU>:-no-pie>
     )
+endfunction()
+
+function(create_build_info)
+	set(template_path "${CMAKE_CURRENT_BINARY_DIR}/build_info.h.in")
+    # Note: we must escape semicolons or they will be swallowed
+	# by their interpretaton as list element separators.
+	set(build_info_h_in "\
+#pragma once
+namespace build_info {
+const char* PROJECT_SOURCE_DIR = \"${PROJECT_SOURCE_DIR}\"\;
+}
+")
+	file(WRITE ${template_path} ${build_info_h_in})
+	configure_file(${template_path} "build_info.h")
 endfunction()
 
 if (BUILD_EXAMPLES)
