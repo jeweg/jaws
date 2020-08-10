@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "jaws/jaws.hpp"
 #include <string>
+#include <string_view>
 
 // This draws inspiration from
 // https://www.boost.org/doc/libs/1_66_0/doc/html/stacktrace/getting_started.html#stacktrace.getting_started.better_asserts
@@ -33,12 +34,12 @@ DefaultFatalHandler(FatalError error_code, std::string_view msg, const char* fun
 } // namespace jaws
 
 #define JAWS_FATAL0()                               \
-    (::jaws::Jaws::instance()->get_fatal_handler()( \
+    (::jaws::get_fatal_handler()( \
         ::jaws::FatalError::Unspecified, {}, JAWS_CURRENT_FUNCTION, __FILE__, __LINE__))
 
 #define JAWS_FATAL1(msg)                            \
-    (::jaws::Jaws::instance()->get_fatal_handler()( \
+    (::jaws::get_fatal_handler()( \
         ::jaws::FatalError::Unspecified, (msg), JAWS_CURRENT_FUNCTION, __FILE__, __LINE__))
 
 #define JAWS_FATAL2(error_code, msg) \
-    (::jaws::Jaws::instance()->get_fatal_handler()((error_code), (msg), JAWS_CURRENT_FUNCTION, __FILE__, __LINE__))
+    (::jaws::get_fatal_handler()((error_code), (msg), JAWS_CURRENT_FUNCTION, __FILE__, __LINE__))

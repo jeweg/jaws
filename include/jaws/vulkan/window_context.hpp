@@ -21,10 +21,13 @@ public:
 
     struct CreateInfo
     {
-        CreateInfo() = default;
-        JAWS_NP_MEMBER3(VkSurfaceKHR, surface, VK_NULL_HANDLE);
-        JAWS_NP_MEMBER3(bool, enable_vsync, true);
-        JAWS_NP_MEMBER3(bool, allow_frame_drops, false);
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        bool enable_vsync = true;
+        bool allow_frame_drops = false;
+
+        CreateInfo& set_surface(VkSurfaceKHR v) { surface = v; return *this; }
+        CreateInfo& set_enable_vsync(VkSurfaceKHR v) { enable_vsync = v; return *this; }
+        CreateInfo& set_allow_frame_drops(VkSurfaceKHR v) { allow_frame_drops = v; return *this; }
     };
 
     void create(Device* device, const CreateInfo & = jaws::util::make_default<CreateInfo>());

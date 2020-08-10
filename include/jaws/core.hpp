@@ -70,39 +70,7 @@
 #define JAWS_DEPRECATED_MSG(msg) 
 #endif
 
-// Named parameter idiom helpers
-namespace detail {
-
-// This wrapper trick enables using parentheses around types containing commas
-// in macro usage. It works by providing a context where including the parentheses
-// is legal: a function definition.
-// https://stackoverflow.com/a/13842784
-template <typename T>
-struct jaws_np_argument_type_wrapper;
-template <typename T, typename U>
-struct jaws_np_argument_type_wrapper<T(U)>
-{
-    using wrapped = U;
-};
-} // namespace detail
-
-#define JAWS_NP_MEMBER2(type, member)                                                             \
-    auto& set_##member(typename detail::jaws_np_argument_type_wrapper<void(type)>::wrapped value) \
-    {                                                                                             \
-        this->member = std::move(value);                                                          \
-        return *this;                                                                             \
-    }                                                                                             \
-    typename detail::jaws_np_argument_type_wrapper<void(type)>::wrapped member
-
-#define JAWS_NP_MEMBER3(type, member, default_value)                                              \
-    auto& set_##member(typename detail::jaws_np_argument_type_wrapper<void(type)>::wrapped value) \
-    {                                                                                             \
-        this->member = std::move(value);                                                          \
-        return *this;                                                                             \
-    }                                                                                             \
-    typename detail::jaws_np_argument_type_wrapper<void(type)>::wrapped member = default_value
-
-
+// TODO: maybe move elsewhere.
 namespace jaws {
 
 #if defined(JAWS_RTTI_ENABLED)
@@ -120,3 +88,4 @@ constexpr const char* get_rtti_type_name()
 #endif
 
 } // namespace jaws
+

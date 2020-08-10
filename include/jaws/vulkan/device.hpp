@@ -7,7 +7,7 @@
 #include "jaws/util/misc.hpp"
 #include "jaws/util/hashing.hpp"
 #include "jaws/util/lru_cache.hpp"
-#include "jaws/vulkan/sediment.hpp"
+//#include "jaws/vulkan/sediment.hpp"
 
 namespace jaws::vulkan {
 
@@ -16,9 +16,25 @@ class JAWS_API Device
 public:
     struct CreateInfo
     {
-        JAWS_NP_MEMBER3(uint32_t, gpu_group_index, 0);
-        JAWS_NP_MEMBER2(ExtensionList, required_extensions);
-        JAWS_NP_MEMBER2(ExtensionList, optional_extensions);
+        uint32_t gpu_group_index = 0;
+        ExtensionList required_extensions;
+        ExtensionList optional_extensions;
+
+        CreateInfo& set_gpu_group_index(uint32_t v)
+        {
+            gpu_group_index = v;
+            return *this;
+        }
+        CreateInfo& set_required_extensions(ExtensionList v)
+        {
+            required_extensions = std::move(v);
+            return *this;
+        }
+        CreateInfo& set_optional_extensions(ExtensionList v)
+        {
+            optional_extensions = std::move(v);
+            return *this;
+        }
     };
 
     Device();
@@ -29,6 +45,7 @@ public:
     void create(Context*, const CreateInfo& = jaws::util::make_default<CreateInfo>());
     void destroy();
 
+    void wait_idle();
 
     VkInstance get_instance() const { return _vk_instance; }
 
@@ -52,9 +69,14 @@ public:
 
     ShaderPtr get_shader(const ShaderCreateInfo&);
 
-    const VolkDeviceTable& vk() const { return _f; };
+    const VolkDeviceTable& vk() const;
 
-    Sediment* get_sediment() { return _sediment.get(); }
+
+    // const ExtensionList& get_extensions() const;
+    // Sediment* get_sediment() { return _sediment.get(); }
+
+    // TODO: later on decide how to handle capability flags less ad-hoc.
+    bool supports_validation_cache() const;
 
 private:
     friend Context;
@@ -65,6 +87,9 @@ private:
     VkDevice _device = VK_NULL_HANDLE;
 
     VolkDeviceTable _f;
+
+    ExtensionList _extensions;
+    bool _has_cap_validation_cache = false;
 
     VmaVulkanFunctions _vma_vulkan_functions;
     VmaAllocator _vma_allocator = VK_NULL_HANDLE;
@@ -79,9 +104,10 @@ private:
     QueueInfo& get_queue_info(Queue q);
     const QueueInfo& get_queue_info(Queue q) const;
 
-    std::unique_ptr<Sediment> _sediment;
+    // std::unique_ptr<Sediment> _sediment;
     std::unique_ptr<ShaderSystem> _shader_system;
 };
+
 
 inline VkPhysicalDevice Device::get_physical_device(uint32_t index) const
 {
@@ -89,15 +115,18 @@ inline VkPhysicalDevice Device::get_physical_device(uint32_t index) const
     return _gpu_group.physicalDevices[index];
 }
 
+
 inline VkQueue Device::get_queue(Queue q)
 {
     return _unique_queues[get_queue_info(q).unique_queue_index];
 }
 
+
 inline uint32_t Device::get_queue_family(Queue q) const
 {
     return get_queue_info(q).family_index;
 }
+
 
 inline Device::QueueInfo& Device::get_queue_info(Queue q)
 {
@@ -105,10 +134,31 @@ inline Device::QueueInfo& Device::get_queue_info(Queue q)
     return _queue_infos[static_cast<size_t>(q)];
 }
 
+
 inline const Device::QueueInfo& Device::get_queue_info(Queue q) const
 {
     JAWS_ASSUME(q != Queue::ELEM_COUNT);
     return _queue_infos[static_cast<size_t>(q)];
+}
+
+
+inline const VolkDeviceTable& Device::vk() const
+{
+    return _f;
+};
+
+
+/*
+inline const ExtensionList& Device::get_extensions() const
+{
+    return _extensions;
+}
+*/
+
+
+inline bool Device::supports_validation_cache() const
+{
+    return _has_cap_validation_cache;
 }
 
 } // namespace jaws::vulkan

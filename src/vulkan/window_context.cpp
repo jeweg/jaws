@@ -46,7 +46,7 @@ void WindowContext::create(Device* device, const CreateInfo& ci)
     for (auto f : surface_formats) {
         logger.info("    format: {}, {}", to_string(f.surfaceFormat.format), to_string(f.surfaceFormat.colorSpace));
     }
-    auto surface_format = choose_best(surface_formats, [](auto sf) {
+    _surface_format = choose_best(surface_formats, [](auto sf) {
         if (sf.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
             && sf.surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB) {
             return 1000;
@@ -62,8 +62,8 @@ void WindowContext::create(Device* device, const CreateInfo& ci)
 
     logger.info(
         "selected surface format: {}, {}",
-        to_string(surface_format.surfaceFormat.format),
-        to_string(surface_format.surfaceFormat.colorSpace));
+        to_string(_surface_format.surfaceFormat.format),
+        to_string(_surface_format.surfaceFormat.colorSpace));
 }
 
 void WindowContext::destroy()
@@ -189,6 +189,8 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = pre_transform;
+    // For blending with other windows in the window system.
+    // We probably almost always don't want this and hence specify opaque here.
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_ci.presentMode = present_mode;
     swapchain_ci.clipped = true;

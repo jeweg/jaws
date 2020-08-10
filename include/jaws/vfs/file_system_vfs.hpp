@@ -21,7 +21,7 @@ virtual std::string get_file_contents(const Path& path) const
 }
  */
 
-class FileSystemVfs : public VfsBackend
+class JAWS_API FileSystemVfs : public VfsBackend
 {
 public:
     FileSystemVfs(const std::filesystem::path& root);

@@ -30,7 +30,6 @@ enum class Category
     Vulkan
 };
 using Logger = spdlog::logger;
-using LoggerPtr = std::shared_ptr<spdlog::logger>;
 using LogLevel = spdlog::level::level_enum;
 
 } // namespace jaws

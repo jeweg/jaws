@@ -53,9 +53,13 @@ void Device::create(Context* context, const CreateInfo& ci)
         auto optional_extensions = ci.optional_extensions;
         auto required_extensions = ci.required_extensions;
 
-        ExtensionList dedicated_alloc_extensions(
-            {Extension("VK_KHR_get_memory_requirements2"), Extension("VK_KHR_dedicated_allocation")});
+        // Extensions required for vulkan-memory-allocators's dedicated alloc feature.
+        const ExtensionList dedicated_alloc_extensions(
+            {"VK_KHR_get_memory_requirements2", "VK_KHR_dedicated_allocation"});
         optional_extensions.add(dedicated_alloc_extensions);
+
+        // Validation cache
+        optional_extensions.add("VK_EXT_validation_cache");
 
         ExtensionList avail_extensions;
         for (const auto& props :
@@ -66,6 +70,11 @@ void Device::create(Context* context, const CreateInfo& ci)
         std::string err;
         wanted_extensions = ExtensionList::resolve(avail_extensions, required_extensions, optional_extensions, &err);
         if (!err.empty()) { JAWS_FATAL1(err); }
+
+        // TODO: wanted_extensions is that we pass to vkCreateDevice.
+        // Is this guaranteed to either get us the extensions or fail (I suspect it is)?
+        // If not, we will have to query the actually active extensions after device creation.
+        _extensions = wanted_extensions;
 
         vma_can_use_dedicated_alloc = wanted_extensions.contains(dedicated_alloc_extensions);
     }
@@ -286,6 +295,8 @@ void Device::create(Context* context, const CreateInfo& ci)
 
         result = vkCreateDevice(pd, &device_ci, nullptr, &_device);
         JAWS_VK_HANDLE_FATAL(result);
+
+        _has_cap_validation_cache = _extensions.contains("VK_EXT_validation_cache");
     }
     logger.info("device: {}", (void*)_device);
 
@@ -355,15 +366,26 @@ void Device::create(Context* context, const CreateInfo& ci)
     vmaDestroyBuffer(_vma_allocator, buffer, allocation);
 #endif
 
+    /*
     _sediment = std::make_unique<Sediment>();
     _sediment->create(this);
+    */
 }
 
 
 void Device::destroy()
 {
-    vmaDestroyAllocator(_vma_allocator);
-    _f.vkDestroyDevice(_device, nullptr);
+    if (_device != VK_NULL_HANDLE) {
+        vmaDestroyAllocator(_vma_allocator);
+        _f.vkDestroyDevice(_device, nullptr);
+        _device = VK_NULL_HANDLE;
+    }
+}
+
+
+void Device::wait_idle()
+{
+    JAWS_VK_HANDLE_FATAL(vkDeviceWaitIdle(_device));
 }
 
 
@@ -375,5 +397,6 @@ ShaderPtr Device::get_shader(const ShaderCreateInfo& ci)
     }
     return _shader_system->get_shader(ci);
 }
+
 
 } // namespace jaws::vulkan

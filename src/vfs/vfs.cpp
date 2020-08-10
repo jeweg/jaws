@@ -6,8 +6,8 @@ namespace jaws::vfs {
 
 namespace detail {
 
-// A proper domain name ends with a ":", but I tend to forget it.
-// We fix this here.
+// A proper domain name ends with a ":" because of symmetry with
+// Path::get_domain. We fix this here.
 std::string fixed_domain(const std::string& d)
 {
     if (!d.empty() && d[d.size() - 1] != ':') { return d + ":"; }
@@ -97,7 +97,7 @@ Path Vfs::make_canonical(Path path) const
                 break;
             }
         }
-        if (!backend_name.empty()) { path = Path(absl::StrCat(backend_name, ":", path.get_path())); }
+        if (!backend_name.empty()) { path = Path(absl::StrCat(backend_name, path.get_path())); }
     }
     return path;
 }

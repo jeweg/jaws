@@ -1,8 +1,5 @@
 ﻿#include <jaws/jaws.hpp>
-
-//#include <spdlog/spdlog.h>
-//#include <boost/scope_exit.hpp>
-//#include <iostream>
+#include <jaws/fatal.hpp>
 
 
 void JustFatalOut()
@@ -19,21 +16,8 @@ void JustFatalOutWithMsg()
 
 int main(int argc, char** argv)
 {
-    jaws::Instance instance;
-    instance.create(argc, argv);
+    // fatal works without jaws initialized.
 
     //JustFatalOut();
     JustFatalOutWithMsg();
-
-
-    /*
-    // TODO: Why is the global set_level ignored here?
-    spdlog::set_level(spdlog::level::debug);
-
-    // This works, though.
-    jaws::GetLogger(jaws::Category::General).set_level(spdlog::level::debug);
-
-    // Piggypacking onto one of jaws' loggers here.
-    auto& logger = jaws::GetLogger(jaws::Category::General);
-    */
 }

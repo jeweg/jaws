@@ -13,6 +13,9 @@ extern JAWS_API std::string queue_family_properties_to_string(const Context&);
 extern JAWS_API std::string surface_capabilities_to_string(const Context&, VkSurfaceKHR);
 
 extern JAWS_API std::string to_string(VkColorSpaceKHR);
-extern JAWS_API std::string to_string(VkFormat);
+
+constexpr absl::string_view to_string(VkFormat);
 
 } // namespace jaws::vulkan
+
+#include "to_string.inl"

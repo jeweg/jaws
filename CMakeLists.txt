@@ -13,7 +13,7 @@ option(BUILD_TESTS "Build the tests?" ON)
 option(BUILD_EXPERIMENTS "Build the experiments?" ON)
 option(BUILD_UTILS "Build the utils?" ON)
 option(SUPPORT_OPENGL "Support for OpenGL?" OFF)
-option(SUPPORT_VULKAN "Support for Vulkan?" OFF)
+option(SUPPORT_VULKAN "Support for Vulkan?" ON)
 option(USE_COTIRE "Use cotire to generate a unity build?" ON)
 option(SEPARATE_HEADER_IMPL "Separate trees for header and impl files in an IDE?" OFF)
 
@@ -22,7 +22,7 @@ option(SEPARATE_HEADER_IMPL "Separate trees for header and impl files in an IDE?
 ####################################################
 
 # Note that this section sets CMAKE_TOOLCHAIN_FILE, so it must go before project().
-include(vcpkg-cmake/vcpkg_cmake.cmake)
+include(external/vcpkg-cmake/vcpkg_cmake.cmake)
 vcpkg_cmake_begin(
     VCPKG_DIR 3rd_party/vcpkg
     REPO_URL https://github.com/jweg/vcpkg
@@ -35,10 +35,10 @@ vcpkg_cmake_package(xxhash)
 
 if (SUPPORT_VULKAN)
     vcpkg_cmake_package(volk)
-    vcpkg_cmake_package(rapidjson)
     vcpkg_cmake_package(spirv-cross)
     vcpkg_cmake_package(vulkan-memory-allocator)
     vcpkg_cmake_package(shaderc)
+    vcpkg_cmake_package(glfw3)
 endif()
 
 if (BUILD_TESTS)
@@ -154,14 +154,15 @@ set(src_opengl
 )
 set(src_vulkan
     include/jaws/vulkan/fwd.hpp
+    include/jaws/vulkan/vulkan.hpp
     include/jaws/vulkan/context.hpp
     include/jaws/vulkan/window_context.hpp
-    include/jaws/vulkan/vulkan.hpp
+    include/jaws/vulkan/device.hpp
     include/jaws/vulkan/utils.hpp
     include/jaws/vulkan/shader_system.hpp
     include/jaws/vulkan/shader.hpp
     include/jaws/vulkan/extension.hpp
-    include/jaws/vulkan/sediment.hpp
+    #include/jaws/vulkan/sediment.hpp
     src/vulkan/context.cpp
     src/vulkan/window_context.cpp
     src/vulkan/device.cpp
@@ -169,9 +170,10 @@ set(src_vulkan
     src/vulkan/vulkan.cpp
     src/vulkan/to_string.cpp
     src/vulkan/to_string.hpp
+    src/vulkan/to_string.inl
     src/vulkan/shader_system.cpp
     src/vulkan/extension.cpp
-    src/vulkan/sediment.cpp
+    #src/vulkan/sediment.cpp
 )
 
 if (WIN32)
@@ -216,6 +218,7 @@ set(src_vfs
     include/jaws/vfs/file_system_vfs.hpp
     src/vfs/file_system_vfs.cpp
     src/vfs/vfs.cpp
+    src/vfs/path.cpp
 )
 
 set(all_source
@@ -286,6 +289,7 @@ set(glm_defines
 
 find_package(absl CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 # Alias that matches the imported target when used from installation.
 # This way code within the build tree (examples, tests) can use the same target name.
@@ -347,20 +351,25 @@ PUBLIC
     #absl::container
 
 PRIVATE
+	xxHash::xxhash
 )
 if (SUPPORT_VULKAN)
 
 	find_package(volk CONFIG REQUIRED)
+	find_package(shaderc CONFIG REQUIRED)
+	find_package(spirv_cross_core CONFIG REQUIRED)
+	find_package(spirv_cross_glsl CONFIG REQUIRED)
+	find_package(spirv_cross_reflect CONFIG REQUIRED)
 
     target_link_libraries(jaws
     PUBLIC
         # For now make most stuff public so we can experiment in examples.
         Vulkan::Vulkan
         volk::volk_headers
-        shaderc::shaderc_combined
-        spirv-cross-reflect
-        spirv-cross-glsl
+        unofficial::shaderc::combined
         spirv-cross-core
+        spirv-cross-glsl
+        spirv-cross-reflect
     )
 endif()
 if (SUPPORT_OPENGL)
@@ -466,8 +475,9 @@ function(create_build_info)
 	# by their interpretaton as list element separators.
 	set(build_info_h_in "\
 #pragma once
+#include <jaws/filesystem.hpp>
 namespace build_info {
-const char* PROJECT_SOURCE_DIR = \"${PROJECT_SOURCE_DIR}\"\;
+const std::filesystem::path PROJECT_SOURCE_DIR = \"${PROJECT_SOURCE_DIR}\"\;
 }
 ")
 	file(WRITE ${template_path} ${build_info_h_in})

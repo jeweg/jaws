@@ -1,8 +1,6 @@
 #include "jaws/vfs/file_system_vfs.hpp"
 #include "absl/hash/hash.h"
-
-#define XXH_INLINE_ALL
-#include "xxhash/xxhash.h"
+#include "xxhash.h"
 
 #include <cstdio>
 
@@ -62,6 +60,7 @@ size_t FileSystemVfs::get_file_size(const Path& path) const
     return r;
 }
 
+
 size_t FileSystemVfs::read_full(const Path& path, uint8_t* write_ptr, size_t* out_fingerprint) const
 {
     fs::path p = to_actual_path(path);
@@ -69,10 +68,9 @@ size_t FileSystemVfs::read_full(const Path& path, uint8_t* write_ptr, size_t* ou
     if (!fh.handle) { return 0; }
     std::fseek(fh.handle, 0, SEEK_END);
     size_t size = std::ftell(fh.handle);
+    std::fseek(fh.handle, 0, SEEK_SET);
     size_t read_bytes = std::fread(write_ptr, 1, size, fh.handle);
-    if (out_fingerprint && read_bytes > 0) {
-        *out_fingerprint = XXH64(write_ptr, read_bytes, 0);
-    }
+    if (out_fingerprint && read_bytes > 0) { *out_fingerprint = XXH64(write_ptr, read_bytes, 0); }
     return read_bytes;
 }
 

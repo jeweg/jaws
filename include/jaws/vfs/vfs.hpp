@@ -9,7 +9,7 @@
 
 namespace jaws::vfs {
 
-class Vfs
+class JAWS_API Vfs
 {
 public:
 
@@ -36,6 +36,7 @@ public:
     const vfs::VfsBackend* lookup_backend(const jaws::vfs::Path& path) const;
 
 private:
+    // Map of named backends
     absl::flat_hash_map<std::string, std::unique_ptr<vfs::VfsBackend>> _vfs_backends;
 
     struct CachedFingerprint

@@ -1,4 +1,5 @@
 build/
+docs/
 
 # clion default build dir naming
 cmake-build*/

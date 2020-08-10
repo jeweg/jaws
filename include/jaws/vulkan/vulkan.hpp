@@ -31,9 +31,9 @@ namespace jaws::vulkan {
 
 constexpr uint32_t INVALID_INDEX = std::numeric_limits<uint32_t>::max();
 
-// The logic is modelled after similar code in Krhonos' vulkan.hpp.
-// Note that almost all vkEnumerate... style functions the count and output data always seem to
-// be the last two parameters. We use that facthere.
+// The logic is modelled after similar code in Khronos' vulkan.hpp.
+// Note that in almost all vkEnumerate... style functions the count and output data always seem to
+// be the last two parameters. We use that fact here.
 // I say almost all because there's at last vkEnumerateInstanceVersion that completely falls out
 // of this pattern.
 template<typename ElemType, typename ... FirstArgs, typename FuncPtrType>

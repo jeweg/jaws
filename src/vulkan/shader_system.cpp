@@ -2,6 +2,7 @@
 #include "jaws/jaws.hpp"
 #include "jaws/assume.hpp"
 #include "jaws/vfs/vfs.hpp"
+#include "jaws/vulkan/vulkan.hpp"
 #include "jaws/vulkan/shader_system.hpp"
 #include "jaws/util/hashing.hpp"
 #include "jaws/util/misc.hpp"
@@ -9,30 +10,24 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/hash/hash.h"
 #include "shaderc/shaderc.hpp"
-#include "spirv_reflect.hpp"
+#include "spirv_cross/spirv_reflect.hpp"
 
 namespace jaws::vulkan {
 
 namespace detail {
 
-static std::string to_string(shaderc_compilation_status s)
+static constexpr absl::string_view to_string(shaderc_compilation_status s)
 {
-    if (s == shaderc_compilation_status_success) {
-        return "success";
-    } else if (s == shaderc_compilation_status_invalid_stage) {
-        return "invalid stage deduction";
-    } else if (s == shaderc_compilation_status_compilation_error) {
-        return "compilation error";
-    } else if (s == shaderc_compilation_status_internal_error) {
-        return "internal error";
-    } else if (s == shaderc_compilation_status_null_result_object) {
-        return "null result object";
-    } else if (s == shaderc_compilation_status_invalid_assembly) {
-        return "invalid assembly";
-    } else if (s == shaderc_compilation_status_validation_error) {
-        return "validation error";
-    } else
-        return "<unknown>";
+    switch (s) {
+    case shaderc_compilation_status_success: return "success";
+    case shaderc_compilation_status_invalid_stage: return "invalid stage deduction";
+    case shaderc_compilation_status_compilation_error: return "compilation error";
+    case shaderc_compilation_status_internal_error: return "internal error";
+    case shaderc_compilation_status_null_result_object: return "null result object";
+    case shaderc_compilation_status_invalid_assembly: return "invalid assembly";
+    case shaderc_compilation_status_validation_error: return "validation error";
+    default: return "<unknown>";
+    }
 }
 
 static shaderc_shader_kind shader_kind_from_ext(std::string_view lc_ext)
@@ -85,8 +80,8 @@ public:
      */
 
 private:
-    const jaws::vfs::Vfs& _vfs;
-    std::vector<ShaderSystem::FileWithFingerprint>* _out_included_files;
+    const jaws::vfs::Vfs &_vfs;
+    std::vector<ShaderSystem::FileWithFingerprint> *_out_included_files;
 
     struct FullResult
     {
@@ -104,17 +99,16 @@ private:
 
 public:
     ShaderSystemIncludeHandler(
-        const jaws::vfs::Vfs& vfs,
-        const vfs::Path& main_source_file,
-        std::vector<ShaderSystem::FileWithFingerprint>* out_included_files) :
-        _vfs(vfs),
-        _out_included_files(out_included_files)
+        const jaws::vfs::Vfs &vfs,
+        const vfs::Path &main_source_file,
+        std::vector<ShaderSystem::FileWithFingerprint> *out_included_files) :
+        _vfs(vfs), _out_included_files(out_included_files)
     {}
 
-    shaderc_include_result* GetInclude(
-        const char* requested_source, // foo.inc
+    shaderc_include_result *GetInclude(
+        const char *requested_source, // foo.inc
         shaderc_include_type type,
-        const char* requesting_source, // simple.comp
+        const char *requesting_source, // simple.comp
         size_t include_depth) override // 1
     {
         vfs::Path requesting_path(requesting_source);
@@ -143,9 +137,9 @@ public:
             full_res->shaderc_result.source_name_length = full_res->source_name.size();
             full_res->shaderc_result.content = full_res->content.c_str();
             full_res->shaderc_result.content_length = full_res->content.size();
-            full_res->shaderc_result.user_data = reinterpret_cast<void*>(this_result_id);
+            full_res->shaderc_result.user_data = reinterpret_cast<void *>(this_result_id);
 
-            shaderc_include_result* returned = &full_res->shaderc_result;
+            shaderc_include_result *returned = &full_res->shaderc_result;
 
             auto [iter, ok] = _alive_results.insert(std::make_pair(this_result_id, std::move(full_res)));
             JAWS_ASSUME(ok);
@@ -160,7 +154,7 @@ public:
         return 0;
     }
 
-    void ReleaseInclude(shaderc_include_result* data) override
+    void ReleaseInclude(shaderc_include_result *data) override
     {
         if (data) {
             uint32_t result_id = reinterpret_cast<uintptr_t>(data->user_data);
@@ -334,31 +328,37 @@ ShaderSystem::~ShaderSystem()
     destroy();
 }
 
-void ShaderSystem::create(Device* device)
+void ShaderSystem::create(Device *device)
 {
     JAWS_ASSUME(device);
     _device = device;
 }
 
 
-void ShaderSystem::destroy() {}
-
-
-Jaws* ShaderSystem::jaws()
+void ShaderSystem::destroy()
 {
-    return _device->get_context()->get_jaws();
+    if (_device) {
+        if (_device->supports_validation_cache()) {
+            vkDestroyValidationCacheEXT(_device->get_device(), _validation_cache, nullptr);
+        }
+        _full_info_cache.clear();
+        _device = nullptr;
+    }
 }
 
 
-const Jaws* ShaderSystem::jaws() const
+ShaderPtr ShaderSystem::get_shader(const ShaderCreateInfo &ci)
 {
-    return _device->get_context()->get_jaws();
-}
+    //-------------------------------------------------------------------------
+    // Create validation cache on demand
 
+    if (!_validation_cache && _device->supports_validation_cache()) {
+        VkValidationCacheCreateInfoEXT ci = {VK_STRUCTURE_TYPE_VALIDATION_CACHE_CREATE_INFO_EXT};
+        JAWS_VK_HANDLE_FATAL(vkCreateValidationCacheEXT(_device->get_device(), &ci, nullptr, &_validation_cache));
+    }
 
-ShaderPtr ShaderSystem::get_shader(const ShaderCreateInfo& ci)
-{
-    // High-level cache handling:
+    //-------------------------------------------------------------------------
+    // High-level cache
 
 #if 0
     if (FullInfo* ei = _full_info_cache.lookup_keyed(ci)) {
@@ -382,24 +382,25 @@ ShaderPtr ShaderSystem::get_shader(const ShaderCreateInfo& ci)
     }
 #endif
 
-    vfs::Path main_source_file = jaws()->get_vfs().make_canonical(ci.main_source_file);
+    vfs::Path main_source_file = jaws::get_vfs().make_canonical(ci.main_source_file);
 
     size_t code_fingerprint;
-    std::string code = jaws()->get_vfs().read_text_file(main_source_file, &code_fingerprint);
+    std::string code = jaws::get_vfs().read_text_file(main_source_file, &code_fingerprint);
     if (code.empty()) { return nullptr; }
 
     shaderc::Compiler compiler;
     shaderc::CompileOptions compile_options;
-    for (const auto& macro : ci.compile_definitions) { compile_options.AddMacroDefinition(macro.first, macro.second); }
+    for (const auto &macro : ci.compile_definitions) { compile_options.AddMacroDefinition(macro.first, macro.second); }
 
     // Setup include handler
     std::vector<FileWithFingerprint> involved_files = {FileWithFingerprint(ci.main_source_file, code_fingerprint)};
     compile_options.SetIncluder(
-        std::make_unique<detail::ShaderSystemIncludeHandler>(jaws()->get_vfs(), ci.main_source_file, &involved_files));
+        std::make_unique<detail::ShaderSystemIncludeHandler>(jaws::get_vfs(), ci.main_source_file, &involved_files));
 
     // Detect shader kind (fragment, vertex, compute, ...)
     std::string lower_extension = jaws::util::to_lower(ci.main_source_file.get_extension());
     shaderc_shader_kind shader_kind = detail::shader_kind_from_ext(lower_extension);
+
 
     auto compile_result = compiler.CompileGlslToSpv(
         code.c_str(),
@@ -409,7 +410,7 @@ ShaderPtr ShaderSystem::get_shader(const ShaderCreateInfo& ci)
         ci.entry_point_name.c_str(),
         compile_options);
 
-    Logger& logger = get_logger(Category::Vulkan);
+    Logger &logger = get_logger(Category::Vulkan);
 
     if (compile_result.GetCompilationStatus() != shaderc_compilation_status_success) {
         logger.error(
@@ -419,24 +420,99 @@ ShaderPtr ShaderSystem::get_shader(const ShaderCreateInfo& ci)
         JAWS_FATAL1("Shader compilation failed");
     } else {
         logger.info(
-            "Successfully compiled shader ({} errors, {} warnings)",
+            "Successfully compiled shader \"{}\" ({} errors, {} warnings)",
+            main_source_file,
             compile_result.GetNumErrors(),
             compile_result.GetNumWarnings());
     }
 
     //-------------------------------------------------------------------------
-    // Reflect on SPIR-V
+    // Reflect on the generated SPIR-V
 
     // std::vector<uint32_t> spirv_code;
     // spirv_code.assign(compile_result.cbegin(), compile_result.cend());
 
-    spirv_cross::CompilerReflection reflector(
-        compile_result.cbegin(), std::distance(compile_result.cbegin(), compile_result.cend()));
+    using CompiledElem = shaderc::SpvCompilationResult::element_type;
+    // The # of elements (uint32_t), not bytes!
+    const size_t num_compiled_elems = std::distance(compile_result.cbegin(), compile_result.cend());
+
+    spirv_cross::CompilerReflection reflector(compile_result.cbegin(), num_compiled_elems);
     std::string reflected_json = reflector.compile();
     spirv_cross::ShaderResources shader_resources =
         reflector.get_shader_resources(reflector.get_active_interface_variables());
 
-    int foo = 3;
+    //-------------------------------------------------------------------------
+    // Compile to SPIR-V
+
+    vfs::Path main_source_file = jaws::get_vfs().make_canonical(ci.main_source_file);
+
+    size_t code_fingerprint;
+    std::string code = jaws::get_vfs().read_text_file(main_source_file, &code_fingerprint);
+    if (code.empty()) { return nullptr; }
+
+    shaderc::Compiler compiler;
+    shaderc::CompileOptions compile_options;
+    for (const auto &macro : ci.compile_definitions) { compile_options.AddMacroDefinition(macro.first, macro.second); }
+
+    // Setup include handler
+    std::vector<FileWithFingerprint> involved_files = {FileWithFingerprint(ci.main_source_file, code_fingerprint)};
+    compile_options.SetIncluder(
+        std::make_unique<detail::ShaderSystemIncludeHandler>(jaws::get_vfs(), ci.main_source_file, &involved_files));
+
+    // Detect shader kind (fragment, vertex, compute, ...)
+    std::string lower_extension = jaws::util::to_lower(ci.main_source_file.get_extension());
+    shaderc_shader_kind shader_kind = detail::shader_kind_from_ext(lower_extension);
+
+
+    auto compile_result = compiler.CompileGlslToSpv(
+        code.c_str(),
+        code.size(),
+        shader_kind,
+        ci.main_source_file.string().c_str(),
+        ci.entry_point_name.c_str(),
+        compile_options);
+
+    Logger &logger = get_logger(Category::Vulkan);
+
+    if (compile_result.GetCompilationStatus() != shaderc_compilation_status_success) {
+        logger.error(
+            "Error compiling shader ({}): {}",
+            detail::to_string(compile_result.GetCompilationStatus()),
+            compile_result.GetErrorMessage());
+        JAWS_FATAL1("Shader compilation failed");
+    } else {
+        logger.info(
+            "Successfully compiled shader \"{}\" ({} errors, {} warnings)",
+            main_source_file,
+            compile_result.GetNumErrors(),
+            compile_result.GetNumWarnings());
+    }
+
+    //-------------------------------------------------------------------------
+    // Reflect on the generated SPIR-V
+
+    // std::vector<uint32_t> spirv_code;
+    // spirv_code.assign(compile_result.cbegin(), compile_result.cend());
+
+    using CompiledElem = shaderc::SpvCompilationResult::element_type;
+    // The # of elements (uint32_t), not bytes!
+    const size_t num_compiled_elems = std::distance(compile_result.cbegin(), compile_result.cend());
+
+    spirv_cross::CompilerReflection reflector(compile_result.cbegin(), num_compiled_elems);
+    std::string reflected_json = reflector.compile();
+    spirv_cross::ShaderResources shader_resources =
+        reflector.get_shader_resources(reflector.get_active_interface_variables());
+
+    //-------------------------------------------------------------------------
+    // Create shader module
+
+    VkShaderModuleCreateInfo mod_ci = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+    mod_ci.codeSize = num_compiled_elems * sizeof(CompiledElem);
+    mod_ci.pCode = compile_result.cbegin();
+    if (_device->supports_validation_cache()) { mod_ci.pNext = &_validation_cache; }
+
+    ShaderPtr result_shader(new Shader(_device));
+    vkCreateShaderModule(_device->get_device(), &mod_ci, nullptr, &result_shader->_shader_module);
 }
 
 

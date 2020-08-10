@@ -13,11 +13,10 @@ namespace detail {
 std::string get_formatted_stackframes(int stackframes_skipped)
 {
     static auto init = []() -> bool {
-        auto cmd = Jaws::instance()->get_cmd_line_args();
-        if (cmd.empty()) {
+        if (!jaws::is_initialized() || jaws::get_cmd_line_args().empty()) {
             absl::InitializeSymbolizer("");
         } else {
-            absl::InitializeSymbolizer(cmd[0].c_str());
+            absl::InitializeSymbolizer(jaws::get_cmd_line_args()[0].c_str());
         }
         return true;
     }();
@@ -82,6 +81,7 @@ void DefaultFatalHandler(FatalError error_code, std::string_view msg, const char
     debug_break();
     // and also maybe on Windows: force a segmentation fault here so we get the option of starting a debugger
     // if we're not already running in one (in which case debug_break will not do anything).
+    *((int*)0) = 0;
 
     std::abort();
 }

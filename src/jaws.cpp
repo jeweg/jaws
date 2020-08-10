@@ -3,6 +3,7 @@
 #include "jaws/fatal.hpp"
 #include "jaws/logging.hpp"
 #include "jaws/vfs/vfs.hpp"
+
 #include <memory>
 #include <iostream>
 
@@ -15,91 +16,81 @@ static_assert(sizeof(size_t) == sizeof(uint64_t), "");
 
 //-------------------------------------------------------------------------
 
-Jaws* Jaws::_the_instance = nullptr;
+// Outside the context so that they can be used
+// to report init() failures.
+FatalHandler g_fatal_handler;
+Logging g_logging;
 
-Jaws::Jaws() {}
+struct GlobalContext {
+    std::vector<std::string> cmd_line_args;
+    vfs::Vfs vfs;
+};
 
-Jaws::~Jaws()
+std::unique_ptr<GlobalContext> g_context;
+
+//-------------------------------------------------------------------------
+
+bool init(int argc, char** argv)
 {
-    destroy();
-}
-
-Jaws* Jaws::instance()
-{
-    if (!_the_instance) {
-        std::cerr << "No Jaws instance created, did you invoke Jaws::create?" << std::endl;
+    if (g_context) {
+        JAWS_FATAL1("jaws already initialized!");
+        return false;
     }
-    return _the_instance;
-}
-
-void Jaws::create(int argc, char** argv)
-{
-    if (_the_instance) {
-        // Hmmm!
-    }
-    _the_instance = this;
-
-    _cmd_line_args.reserve(argc);
-    for (size_t i = 0; i < argc; ++i) {
-        _cmd_line_args.emplace_back(argv[i]);
+    g_context = std::make_unique<GlobalContext>();
+    g_context->cmd_line_args.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        g_context->cmd_line_args.emplace_back(argv[i]);
     }
 }
 
-void Jaws::destroy() {}
 
-
-const std::vector<std::string>& Jaws::get_cmd_line_args() const
+bool destroy()
 {
-    return _cmd_line_args;
-}
-
-
-void Jaws::set_fatal_handler(FatalHandler fh)
-{
-    _fatal_handler = std::move(fh);
-}
-
-
-FatalHandler Jaws::get_fatal_handler() const
-{
-    if (!_fatal_handler) {
-        _fatal_handler = &DefaultFatalHandler;
+    if (!g_context) {
+        JAWS_FATAL1("jaws not yet initialized!");
+        return false;
     }
-    return _fatal_handler;
+    g_context.reset();
 }
 
 
-vfs::Vfs& Jaws::get_vfs()
+bool is_initialized()
 {
-    return const_cast<vfs::Vfs&>(const_cast<const Jaws*>(this)->get_vfs());
+    return !!g_context;
 }
 
-const vfs::Vfs& Jaws::get_vfs() const
-{
-    if (!_vfs) { _vfs = std::make_unique<vfs::Vfs>(); }
-    return *_vfs;
-}
-
-Logger& Jaws::get_logger(Category cat) const
-{
-    if (!_logging) { _logging = std::make_unique<Logging>(); }
-    return _logging->get_logger(cat);
-}
-
-LoggerPtr Jaws::get_logger_ptr(Category cat) const
-{
-    if (!_logging) { _logging = std::make_unique<Logging>(); }
-    return _logging->get_logger_ptr(cat);
-}
 
 Logger& get_logger(Category cat)
 {
-    return Jaws::instance()->get_logger(cat);
+    return g_logging.get_logger(cat);
 }
 
-LoggerPtr get_logger_ptr(Category cat)
+
+vfs::Vfs& get_vfs()
 {
-    return Jaws::instance()->get_logger_ptr(cat);
+    return g_context->vfs;
+}
+
+
+const std::vector<std::string>& get_cmd_line_args()
+{
+    return g_context->cmd_line_args;
+}
+
+
+void set_fatal_handler(FatalHandler fh)
+{
+    g_fatal_handler = std::move(fh);
+}
+
+
+FatalHandler get_fatal_handler()
+{
+    if (!g_fatal_handler) {
+        // Always return a valid handler so things like JAWS_FATAL work.
+        return &DefaultFatalHandler;
+    }
+    return g_fatal_handler;
 }
 
 } // namespace jaws

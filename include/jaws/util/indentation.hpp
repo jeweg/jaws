@@ -81,13 +81,13 @@ private:
 
 class IndentationLogger
 {
-    jaws::LoggerPtr _logger;
+    jaws::Logger& _logger;
     jaws::LogLevel _log_level;
     Indentation _indentation;
 
 public:
     IndentationLogger(
-        jaws::LoggerPtr logger,
+        jaws::Logger& logger,
         const jaws::LogLevel log_level = spdlog::level::level_enum::info,
         const int initial_indent_level = 0,
         const std::string& indent_step = {}) :
@@ -109,7 +109,7 @@ public:
     template <typename... Args>
     void Log(const char* format, const Args&... args)
     {
-        if (_logger) { _logger->log(_log_level, (_indentation.Get() + format).c_str(), args...); }
+        _logger.log(_log_level, (_indentation.Get() + format).c_str(), args...);
     }
 };
 

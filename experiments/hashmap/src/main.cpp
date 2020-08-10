@@ -1,4 +1,5 @@
 ﻿#include "jaws/jaws.hpp"
+#include "jaws/assume.hpp"
 #include <unordered_map>
 #include <iostream>
 
@@ -86,7 +87,7 @@ template<> struct hash<A>
 
 int main(int argc, char** argv)
 {
-    logger = jaws::GetLoggerPtr(jaws::Category::General);
+    logger = jaws::Jaws::instance()->get_logger_ptr(jaws::Category::General);
     logger->set_pattern("[%n] [%l] %v");
 
     logger->info("create hashmap:");

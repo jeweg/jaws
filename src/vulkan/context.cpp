@@ -37,12 +37,10 @@ Context::~Context()
 }
 
 
-void Context::create(jaws::Jaws* jaws, const Context::CreateInfo& ci)
+void Context::create(const Context::CreateInfo& ci)
 {
-    JAWS_ASSUME(jaws);
-    _jaws = jaws;
     VkResult result;
-    auto& logger = _jaws->get_logger(Category::Vulkan);
+    auto& logger = jaws::get_logger(Category::Vulkan);
 
     if (!ci.vkGetInstanceProcAddr) {
         result = volkInitialize();

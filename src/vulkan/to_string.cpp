@@ -7,6 +7,7 @@
 #include "absl/strings/str_join.h"
 #include <tuple>
 #include <iostream>
+#include <string>
 
 namespace jaws::vulkan {
 
@@ -131,11 +132,6 @@ typedef struct VkSurfaceCapabilitiesKHR {
 }
 
 std::string to_string(VkColorSpaceKHR e)
-{
-    return std::to_string(static_cast<int32_t>(e));
-}
-
-std::string to_string(VkFormat e)
 {
     return std::to_string(static_cast<int32_t>(e));
 }

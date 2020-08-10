@@ -25,18 +25,31 @@ public:
 
     struct CreateInfo
     {
-        JAWS_NP_MEMBER3(const char*, app_name, nullptr);
-        JAWS_NP_MEMBER3(PFN_vkGetInstanceProcAddr, vkGetInstanceProcAddr, nullptr);
-        JAWS_NP_MEMBER2(ExtensionList, required_layers);
-        JAWS_NP_MEMBER2(ExtensionList, optional_layers);
-        JAWS_NP_MEMBER2(ExtensionList, required_instance_extensions);
-        JAWS_NP_MEMBER2(ExtensionList, optional_instance_extensions);
-        JAWS_NP_MEMBER3(bool, headless, false);
-        JAWS_NP_MEMBER3(bool, debugging, true);
-        JAWS_NP_MEMBER3(int32_t, app_version_major, 1);
-        JAWS_NP_MEMBER3(int32_t, app_version_minor, 0);
-        JAWS_NP_MEMBER3(int32_t, app_version_patch, 0);
-        JAWS_NP_MEMBER2(PresentationSupportCallback, presentation_support_callback);
+        const char* app_name = nullptr;
+        PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = nullptr;
+        ExtensionList required_layers;
+        ExtensionList optional_layers;
+        ExtensionList required_instance_extensions;
+        ExtensionList optional_instance_extensions;
+        bool headless = false;
+        bool debugging = true;
+        int32_t app_version_major = 1;
+        int32_t app_version_minor = 0;
+        int32_t app_version_patch = 0;
+        PresentationSupportCallback presentation_support_callback;
+
+        CreateInfo& set_app_name(const char* v) { app_name = v; return *this; }
+        CreateInfo& set_vkGetInstanceProcAddr(PFN_vkGetInstanceProcAddr v) { vkGetInstanceProcAddr = v; return *this; }
+        CreateInfo& set_required_layers(ExtensionList v) { required_layers = std::move(v); return *this; }
+        CreateInfo& set_optional_layers(ExtensionList v) { optional_layers = std::move(v); return *this; }
+        CreateInfo& set_required_instance_extensions(ExtensionList v) { required_instance_extensions = std::move(v); return *this; }
+        CreateInfo& set_optional_instance_extensions(ExtensionList v) { optional_instance_extensions = std::move(v); return *this; }
+        CreateInfo& set_headless(bool v) { headless = v; return *this; }
+        CreateInfo& set_debugging(bool v) { debugging = v; return *this; }
+        CreateInfo& set_app_version_major(int32_t v) { app_version_major = v; return *this; }
+        CreateInfo& set_app_version_minor(int32_t v) { app_version_minor = v; return *this; }
+        CreateInfo& set_app_version_patch(int32_t v) { app_version_patch = v; return *this; }
+        CreateInfo& set_presentation_support_callback(PresentationSupportCallback v) { presentation_support_callback = v; return *this; }
     };
 
     Context();
@@ -47,10 +60,8 @@ public:
     //static std::vector<const char*> defaultInstanceExtensions(absl::Span<const char* const> extra = {});
     //static bool extensionListContains(absl::Span<const char* const> list, const char* ext);
 
-    void create(jaws::Jaws* jaws, const CreateInfo & = jaws::util::make_default<CreateInfo>());
+    void create(const CreateInfo & = jaws::util::make_default<CreateInfo>());
     void destroy();
-
-    Jaws* get_jaws() const { return _jaws; }
 
     [[nodiscard]] VkInstance get_instance() const;
     [[nodiscard]] PresentationSupportCallback get_presentation_support_callback() const;
@@ -58,7 +69,6 @@ public:
     bool is_headless() const { return _headless; }
 
 private:
-    Jaws *_jaws = nullptr;
     VkInstance _vk_instance = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> _physical_devices;
     PresentationSupportCallback _presentation_support_callback;
