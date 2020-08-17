@@ -37,24 +37,29 @@ struct ShaderCreateInfo
         return *this;
     }
 
-    template <typename H>
-    friend H AbslHashValue(H h, const ShaderCreateInfo &sd)
+    friend bool operator==(const ShaderCreateInfo &a, const ShaderCreateInfo &b)
     {
-        return H::combine(std::move(h), sd.main_source_file, sd.include_paths, sd.compile_definitions);
+        return a.main_source_file == b.main_source_file && a.entry_point_name == b.entry_point_name
+               && a.include_paths == b.include_paths && a.compile_definitions == b.compile_definitions;
+    }
+
+    friend bool operator!=(const ShaderCreateInfo &a, const ShaderCreateInfo &b) { return !(a == b); }
+
+    template <typename H>
+    friend H AbslHashValue(H h, const ShaderCreateInfo &v)
+    {
+        return H::combine(std::move(h), v.main_source_file, v.include_paths, v.compile_definitions);
     }
 };
 
 
-class Shader : public jaws::util::RefCounted<Shader>
+class Shader : public jaws::util::RefCountedHandle<struct ShaderResource>
 {
 public:
-    Shader(Device *device) : _device(device) { JAWS_ASSUME(device); }
+    using RefCountedHandle::RefCountedHandle;
 
 private:
-    Device *_device;
-    VkShaderModule _shader_module = VK_NULL_HANDLE;
+    friend class ShaderSystem;
 };
-
-using ShaderPtr = jaws::util::ref_ptr<Shader>;
 
 } // namespace jaws::vulkan

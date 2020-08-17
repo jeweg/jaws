@@ -2,18 +2,39 @@
 #include "jaws/core.hpp"
 #include "jaws/jaws.hpp"
 #include "jaws/vfs/path.hpp"
+#include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/context.hpp"
 #include "jaws/vulkan/device.hpp"
 #include "jaws/vulkan/shader.hpp"
 #include "jaws/util/lru_cache.hpp"
+#include "jaws/util/misc.hpp"
 //#include "sediment.hpp"
 #include <tuple>
+#include <memory>
 
 namespace jaws::vulkan {
+
+struct ShaderResource : public jaws::util::RefCounted<ShaderResource>
+{
+    VkShaderModule shader_module = VK_NULL_HANDLE;
+    ShaderSystem *shader_system = nullptr;
+
+    void on_all_references_dropped() override;
+};
 
 
 class ShaderSystem
 {
+    /*
+
+    create_info (lists the file names and everything needed to resolve and interpret the contents, but NOT the file
+    contents)
+        -> full info (create_info + file fingerprints)
+            -> shader resource, relevant reflection output
+
+
+    */
+
     /*
 2. The shader system can be instructed to compile a single shader (i.e. a pipeline's particular stage) by
    specifying a vfs name and a shader source file.
@@ -30,25 +51,32 @@ public:
 
     ShaderSystem();
     ~ShaderSystem();
-    ShaderSystem(const ShaderSystem&) = delete;
-    ShaderSystem& operator=(const ShaderSystem&) = delete;
+    ShaderSystem(const ShaderSystem &) = delete;
+    ShaderSystem &operator=(const ShaderSystem &) = delete;
 
-    void create(Device*);
+    void create(Device *);
     void destroy();
 
-    ShaderPtr get_shader(const ShaderCreateInfo&);
+    Shader get_shader(const ShaderCreateInfo &);
 
 private:
-    Device* _device = nullptr;
+    friend class ShaderResource;
+    void shader_got_unreferenced(ShaderResource *)
+    {
+        // schedule for actual deletion of vulkan resources. not within a frame, though!
+    }
+
+private:
+    Device *_device = nullptr;
     VkValidationCacheEXT _validation_cache = VK_NULL_HANDLE;
 
-    struct FullInfo
+    struct CachedShaderInformation : util::MovableOnly
     {
-        ShaderCreateInfo ci;
         std::vector<FileWithFingerprint> involved_files;
-        // Sediment::Hash sediment_hash;
+        ShaderResource shader_resource;
     };
-    jaws::util::NoKeysStoredLruCache<ShaderCreateInfo, FullInfo> _full_info_cache;
+
+    util::LruCache<ShaderCreateInfo, CachedShaderInformation> _shader_cache;
 };
 
 } // namespace jaws::vulkan
