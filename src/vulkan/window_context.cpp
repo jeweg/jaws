@@ -13,9 +13,9 @@ WindowContext::~WindowContext()
     destroy();
 }
 
-void WindowContext::create(Device* device, const CreateInfo& ci)
+void WindowContext::create(Device *device, const CreateInfo &ci)
 {
-    auto& logger = get_logger(jaws::Category::Vulkan);
+    auto &logger = get_logger(jaws::Category::Vulkan);
 
     JAWS_ASSUME(device);
     JAWS_ASSUME(ci.surface);
@@ -68,13 +68,16 @@ void WindowContext::create(Device* device, const CreateInfo& ci)
 
 void WindowContext::destroy()
 {
-    vkDestroySurfaceKHR(_device->get_instance(), _surface, nullptr);
+    if (_surface) {
+        vkDestroySurfaceKHR(_device->get_instance(), _surface, nullptr);
+        _surface = VK_NULL_HANDLE;
+    }
 }
 
 
 void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
 {
-    auto& logger = get_logger(Category::Vulkan);
+    auto &logger = get_logger(Category::Vulkan);
 
     const auto physical_device = _device->get_physical_device();
     VkResult result = {};
@@ -196,8 +199,8 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     swapchain_ci.clipped = true;
     swapchain_ci.oldSwapchain = nullptr; // https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
 
-    std::array<uint32_t, 2> queue_family_indices = {_device->get_queue_family(Device::Queue::Graphics),
-                                                    _device->get_queue_family(Device::Queue::Present)};
+    std::array<uint32_t, 2> queue_family_indices = {
+        _device->get_queue_family(Device::Queue::Graphics), _device->get_queue_family(Device::Queue::Present)};
     if (queue_family_indices[0] != queue_family_indices[1]) {
         // If the graphics and present queues are from different queue families,
         // we either have to explicitly transfer ownership of images between the
@@ -209,7 +212,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     }
     result = vkCreateSwapchainKHR(_device->get_device(), &swapchain_ci, nullptr, &_swapchain);
     JAWS_VK_HANDLE_FATAL(result);
-    logger.info("swapchain: {}", (void*)_swapchain);
+    logger.info("swapchain: {}", (void *)_swapchain);
 };
 
 } // namespace jaws::vulkan
