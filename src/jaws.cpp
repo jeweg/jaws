@@ -1,4 +1,4 @@
-﻿#include "pch.hpp"
+#include "pch.hpp"
 #include "jaws/jaws.hpp"
 #include "jaws/fatal.hpp"
 #include "jaws/logging.hpp"
@@ -21,7 +21,8 @@ static_assert(sizeof(size_t) == sizeof(uint64_t), "");
 FatalHandler g_fatal_handler;
 Logging g_logging;
 
-struct GlobalContext {
+struct GlobalContext
+{
     std::vector<std::string> cmd_line_args;
     vfs::Vfs vfs;
 };
@@ -30,7 +31,7 @@ std::unique_ptr<GlobalContext> g_context;
 
 //-------------------------------------------------------------------------
 
-bool init(int argc, char** argv)
+bool init(int argc, char **argv)
 {
     if (g_context) {
         JAWS_FATAL1("jaws already initialized!");
@@ -38,9 +39,8 @@ bool init(int argc, char** argv)
     }
     g_context = std::make_unique<GlobalContext>();
     g_context->cmd_line_args.reserve(argc);
-    for (int i = 0; i < argc; ++i) {
-        g_context->cmd_line_args.emplace_back(argv[i]);
-    }
+    for (int i = 0; i < argc; ++i) { g_context->cmd_line_args.emplace_back(argv[i]); }
+    return true;
 }
 
 
@@ -51,6 +51,7 @@ bool destroy()
         return false;
     }
     g_context.reset();
+    return true;
 }
 
 
@@ -60,19 +61,19 @@ bool is_initialized()
 }
 
 
-Logger& get_logger(Category cat)
+Logger &get_logger(Category cat)
 {
     return g_logging.get_logger(cat);
 }
 
 
-vfs::Vfs& get_vfs()
+vfs::Vfs &get_vfs()
 {
     return g_context->vfs;
 }
 
 
-const std::vector<std::string>& get_cmd_line_args()
+const std::vector<std::string> &get_cmd_line_args()
 {
     return g_context->cmd_line_args;
 }
