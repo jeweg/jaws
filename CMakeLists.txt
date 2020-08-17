@@ -138,10 +138,6 @@ set(src_root
     src/fatal.cpp
     src/errors.cpp
 )
-set(src_docs
-	docs/log.md
-	docs/overview.md
-)
 set(src_opengl
     include/jaws/opengl/opengL.hpp
     include/jaws/opengl/context.hpp
@@ -240,7 +236,6 @@ endif()
 if (SEPARATE_HEADER_IMPL)
     # Organizes in two trees
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${all_source})
-    source_group("jaws\\docs" FILES ${src_docs})
 else()
     # Manual organization reflecting namespaces
     source_group("jaws" FILES ${src_root})
@@ -248,7 +243,6 @@ else()
     source_group("jaws\\vulkan" FILES ${src_vulkan})
     source_group("jaws\\util" FILES ${src_util})
     source_group("jaws\\vfs" FILES ${src_vfs})
-    source_group("jaws\\docs" FILES ${src_docs})
     source_group("jaws\\3rd-party" FILES ${src_3rdparty})
 endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -256,7 +250,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_library(jaws
     STATIC # See log [2019-09-28 Fri]
     ${all_source}
-    ${src_docs}
 )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -308,6 +301,9 @@ target_compile_definitions(jaws
 PRIVATE
     JAWS_EXPORTS
     ${glm_defines}
+    $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING>
+    $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING>
+
 )
 
 get_target_property(jaws_lib_type jaws TYPE)
