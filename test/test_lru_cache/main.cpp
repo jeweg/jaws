@@ -1,11 +1,12 @@
-﻿#include "jaws/util/lru_cache.hpp"
+#include "jaws/util/lru_cache.hpp"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace jaws::util;
 using namespace std::string_literals;
 
-TEST(lru_cache_test, basic) {
+TEST(lru_cache_test, basic)
+{
     LruCache<int, std::string> c(4, 0);
 
     EXPECT_EQ(c.size(), 0);
@@ -48,7 +49,8 @@ TEST(lru_cache_test, basic) {
     EXPECT_TRUE(c.empty());
 }
 
-TEST(lru_cache_test, automatic_purge) {
+TEST(lru_cache_test, automatic_purge)
+{
     LruCache<int, std::string> c(4, 0);
 
     c.insert(100, "100");
@@ -63,8 +65,9 @@ TEST(lru_cache_test, automatic_purge) {
     EXPECT_EQ(c.get_size(), 4);
 }
 
-TEST(lru_cache_test, manual_purge) {
-    LruCache<int, std::string> c{ /* default arguments disable purge */ };
+TEST(lru_cache_test, manual_purge)
+{
+    LruCache<int, std::string> c{/* default arguments disable purge */};
 
     c.insert(100, "100");
     c.insert(101, "101");
@@ -80,7 +83,8 @@ TEST(lru_cache_test, manual_purge) {
     EXPECT_EQ(c.get_size(), 6);
 }
 
-TEST(lru_cache_test, aging) {
+TEST(lru_cache_test, aging)
+{
     LruCache<int, std::string> c;
 
     // Just using the elem count as limiter is not great if
@@ -121,4 +125,24 @@ TEST(lru_cache_test, aging) {
     EXPECT_TRUE(c.empty());
 }
 
+struct A
+{
+    A(int) {}
+    A(A &&) = default;
+    A &operator=(A &&) = default;
+    A(const A &) = delete;
+    A &operator==(const A &) = delete;
+};
 
+static_assert(std::is_move_constructible_v<A>);
+static_assert(!std::is_copy_constructible_v<A>);
+
+TEST(lru_cache_test, movable_only)
+{
+    LruCache<int, A> c;
+    c.insert(0, A{123});
+
+    A a{456};
+    // c.insert(0, a); // fails to compile, can't copy.
+    c.insert(0, std::move(a));
+}
