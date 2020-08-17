@@ -13,31 +13,30 @@ public:
     class IndentGuard
     {
     public:
-        IndentGuard(StringLinesBuilder& sb, int delta_depth) : _sb(sb), _delta_depth(delta_depth)
+        IndentGuard(StringLinesBuilder &sb, int delta_depth) : _sb(sb), _delta_depth(delta_depth)
         {
             _sb.indent(_delta_depth);
         }
         ~IndentGuard() { _sb.indent(-_delta_depth); }
 
     private:
-        StringLinesBuilder& _sb;
+        StringLinesBuilder &_sb;
         int _delta_depth;
     };
 
     StringLinesBuilder(const std::string indent_fill_step = "    ") : StringLinesBuilder(0, indent_fill_step) {}
 
     StringLinesBuilder(int indent_depth, const std::string indent_fill_step = "    ") :
-        _indent_depth(indent_depth),
-        _indent_fill_step(indent_fill_step)
+        _indent_depth(indent_depth), _indent_fill_step(indent_fill_step)
     {}
 
-    StringLinesBuilder& append()
+    StringLinesBuilder &append()
     {
         absl::StrAppend(&_accum_string, "\n");
         return *this;
     }
 
-    StringLinesBuilder& append(const std::string& line)
+    StringLinesBuilder &append(const std::string &line)
     {
         if (line.empty()) {
             return append();
@@ -54,7 +53,7 @@ public:
 
     // Just for the convenience of dropping "fmt::format(" really.
     template <typename S, typename... Args>
-    StringLinesBuilder& append_format(const S& format_str, const Args&... args)
+    StringLinesBuilder &append_format(const S &format_str, const Args &... args)
     {
         return append(fmt::format(format_str, args...));
     }

@@ -1,4 +1,4 @@
-﻿#include "pch.hpp"
+#include "pch.hpp"
 #include "jaws/util/indenting_ostream.hpp"
 
 #if 0

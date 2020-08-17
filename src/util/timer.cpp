@@ -1,4 +1,4 @@
-﻿#include "pch.hpp"
+#include "pch.hpp"
 #include "jaws/util/timer.hpp"
 #ifdef _WIN32
 #    include "jaws/windows.hpp"

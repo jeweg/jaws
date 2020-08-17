@@ -16,9 +16,9 @@ static VkBool32 VKAPI_PTR VulkanContextDebugCB(
     uint64_t object,
     size_t location,
     int32_t messageCode,
-    const char* pLayerPrefix,
-    const char* pMessage,
-    void* pUserData)
+    const char *pLayerPrefix,
+    const char *pMessage,
+    void *pUserData)
 {
     // jaws::vulkan::Context* context = static_cast<jaws::vulkan::Context*>(pUserData);
     // auto &logger = jaws::GetLogger(jaws::Category::Vulkan);
@@ -37,10 +37,10 @@ Context::~Context()
 }
 
 
-void Context::create(const Context::CreateInfo& ci)
+void Context::create(const Context::CreateInfo &ci)
 {
     VkResult result;
-    auto& logger = jaws::get_logger(Category::Vulkan);
+    auto &logger = jaws::get_logger(Category::Vulkan);
 
     if (!ci.vkGetInstanceProcAddr) {
         result = volkInitialize();
@@ -74,7 +74,7 @@ void Context::create(const Context::CreateInfo& ci)
         if (ci.debugging) { optional_layers.add(Extension("VK_LAYER_LUNARG_standard_validation")); }
 
         ExtensionList avail_layers;
-        for (const auto& layer : enumerated<VkLayerProperties>(vkEnumerateInstanceLayerProperties, {})) {
+        for (const auto &layer : enumerated<VkLayerProperties>(vkEnumerateInstanceLayerProperties, {})) {
             avail_layers.add(Extension(layer.layerName, layer.specVersion));
         }
 
@@ -117,7 +117,7 @@ void Context::create(const Context::CreateInfo& ci)
         required_extensions.add(Extension("VK_KHR_get_surface_capabilities2"));
 
         ExtensionList avail_extensions;
-        for (const auto& e : enumerated<VkExtensionProperties>(vkEnumerateInstanceExtensionProperties, {}, nullptr)) {
+        for (const auto &e : enumerated<VkExtensionProperties>(vkEnumerateInstanceExtensionProperties, {}, nullptr)) {
             avail_extensions.add(Extension(e.extensionName, e.specVersion));
         }
 
@@ -155,7 +155,7 @@ void Context::create(const Context::CreateInfo& ci)
         JAWS_VK_HANDLE_FATAL(result);
         volkLoadInstance(_vk_instance);
 
-        logger.info("instance: {}", (void*)_vk_instance);
+        logger.info("instance: {}", (void *)_vk_instance);
 
         //-------------------------------------------------------------------------
         // Debug reporting

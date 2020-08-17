@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "jaws/core.hpp"
 #include "jaws/fwd.hpp"
 #include "jaws/assume.hpp"
@@ -17,14 +17,15 @@ class JAWS_API Logging
 {
 public:
     Logging() :
-        _logger_data{LoggerData("User"),
-                     LoggerData("General"),
-                     LoggerData("UncaughtException"),
-                     LoggerData("OpenGL"),
-                     LoggerData("Vulkan")}
+        _logger_data{
+            LoggerData("User"),
+            LoggerData("General"),
+            LoggerData("UncaughtException"),
+            LoggerData("OpenGL"),
+            LoggerData("Vulkan")}
     {}
 
-    Logger& get_logger(Category cat)
+    Logger &get_logger(Category cat)
     {
         size_t i = static_cast<size_t>(cat);
         JAWS_ASSUME(i < _logger_data.size());
@@ -46,7 +47,7 @@ private:
 
         explicit LoggerData(std::string name) : name(std::move(name)) {}
 
-        Logger& get_logger()
+        Logger &get_logger()
         {
             // Create logger on demand.
             if (!spd_logger) {

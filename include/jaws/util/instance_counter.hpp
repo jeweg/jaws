@@ -15,22 +15,22 @@ class InstanceCounter
 protected: // TODO: questionable
     uint64_t _InstanceCounter_this_id = 0;
     bool _InstanceCounter_in_moved_from_state = false;
-    static uint64_t& NextId()
+    static uint64_t &NextId()
     {
         static uint64_t next_id = 0;
         return next_id;
     }
-    static int& moved_from_instance_count()
+    static int &moved_from_instance_count()
     {
         static int count = 0;
         return count;
     }
-    static int& alive_instance_count()
+    static int &alive_instance_count()
     {
         static int count = 0;
         return count;
     }
-    void log_event(const std::string& msg)
+    void log_event(const std::string &msg)
     {
         if (enable_log_lifetime_events) {
             std::cerr << fmt::format(
@@ -61,19 +61,19 @@ protected:
         log_event("C'tor");
         log_count_changes();
     }
-    InstanceCounter(const InstanceCounter& other) : _InstanceCounter_this_id(NextId()++)
+    InstanceCounter(const InstanceCounter &other) : _InstanceCounter_this_id(NextId()++)
     {
         JAWS_ASSUME(!other._InstanceCounter_in_moved_from_state);
         ++alive_instance_count();
         log_event(fmt::format("Copy c'tor <-[{}]", other._InstanceCounter_this_id));
         log_count_changes();
     }
-    InstanceCounter& operator=(const InstanceCounter& other)
+    InstanceCounter &operator=(const InstanceCounter &other)
     {
         JAWS_ASSUME(!other._InstanceCounter_in_moved_from_state);
         log_event(fmt::format("Copy assignment op <-[{}]", other._InstanceCounter_this_id));
     }
-    InstanceCounter(InstanceCounter&& other) noexcept : _InstanceCounter_this_id(NextId()++)
+    InstanceCounter(InstanceCounter &&other) noexcept : _InstanceCounter_this_id(NextId()++)
     {
         JAWS_ASSUME(!other._InstanceCounter_in_moved_from_state);
         other._InstanceCounter_in_moved_from_state = true;
@@ -82,7 +82,7 @@ protected:
         log_event(fmt::format("Move c'tor <-[{}]", other._InstanceCounter_this_id));
         log_count_changes();
     }
-    InstanceCounter& operator=(InstanceCounter&& other) noexcept
+    InstanceCounter &operator=(InstanceCounter &&other) noexcept
     {
         JAWS_ASSUME(!other._InstanceCounter_in_moved_from_state);
         other._InstanceCounter_in_moved_from_state = true;

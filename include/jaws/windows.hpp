@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #if defined(JAWS_OS_WIN)
 
 #    include "jaws/core.hpp"

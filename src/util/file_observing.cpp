@@ -6,7 +6,7 @@ namespace fs = std::filesystem;
 
 namespace jaws::util::file_observing {
 
-Event get_file_event(const std::filesystem::path& path, State& in_out_state)
+Event get_file_event(const std::filesystem::path &path, State &in_out_state)
 {
     std::error_code ec;
     State now;

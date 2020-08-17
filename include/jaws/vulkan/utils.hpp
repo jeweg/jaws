@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "jaws/core.hpp"
 #include "jaws/vulkan/vulkan.hpp"
 #include "jaws/assume.hpp"
@@ -10,7 +10,7 @@
 namespace jaws::vulkan {
 
 template <typename T, typename FUNC>
-T choose_best(const std::vector<T>& candidates, FUNC f)
+T choose_best(const std::vector<T> &candidates, FUNC f)
 {
     JAWS_ASSUME(!candidates.empty());
     T best_one = candidates[0];

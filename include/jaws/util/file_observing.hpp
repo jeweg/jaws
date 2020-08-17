@@ -20,6 +20,6 @@ struct State
 };
 
 
-JAWS_API Event get_file_event(const std::filesystem::path& path, State& in_out_state);
+JAWS_API Event get_file_event(const std::filesystem::path &path, State &in_out_state);
 
 } // namespace jaws::util::file_observing

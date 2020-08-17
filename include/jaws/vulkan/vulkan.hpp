@@ -20,11 +20,17 @@
 
 
 #define JAWS_VK_HANDLE_RETURN(vk_result, return_value) \
-if (false) {} else if (vk_result < 0) { return return_value; }
+    if (false) {                                       \
+    } else if (vk_result < 0) {                        \
+        return return_value;                           \
+    }
 
 
 #define JAWS_VK_HANDLE_FATAL(vk_result) \
-if (false) {} else if (vk_result < 0) { JAWS_FATAL0(); }
+    if (false) {                        \
+    } else if (vk_result < 0) {         \
+        JAWS_FATAL0();                  \
+    }
 
 
 namespace jaws::vulkan {
@@ -36,8 +42,9 @@ constexpr uint32_t INVALID_INDEX = std::numeric_limits<uint32_t>::max();
 // be the last two parameters. We use that fact here.
 // I say almost all because there's at last vkEnumerateInstanceVersion that completely falls out
 // of this pattern.
-template<typename ElemType, typename ... FirstArgs, typename FuncPtrType>
-std::vector<ElemType> enumerated(FuncPtrType func_ptr, ElemType elem_prototype, FirstArgs ... first_args) {
+template <typename ElemType, typename... FirstArgs, typename FuncPtrType>
+std::vector<ElemType> enumerated(FuncPtrType func_ptr, ElemType elem_prototype, FirstArgs... first_args)
+{
     VkResult result;
     std::vector<ElemType> result_list;
     uint32_t count = std::numeric_limits<uint32_t>::max();
@@ -58,8 +65,9 @@ std::vector<ElemType> enumerated(FuncPtrType func_ptr, ElemType elem_prototype, 
 }
 
 // version of enumerated() for void-returning function (e.g. vkGetPhysicalDeviceQueueFamilyProperties2).
-template<typename ElemType, typename ... FirstArgs, typename FuncPtrType>
-std::vector<ElemType> enumerated_void(FuncPtrType func_ptr, ElemType elem_prototype, FirstArgs ... first_args) {
+template <typename ElemType, typename... FirstArgs, typename FuncPtrType>
+std::vector<ElemType> enumerated_void(FuncPtrType func_ptr, ElemType elem_prototype, FirstArgs... first_args)
+{
     std::vector<ElemType> result_list;
     uint32_t count = std::numeric_limits<uint32_t>::max();
     func_ptr(first_args..., &count, nullptr);
@@ -72,4 +80,4 @@ std::vector<ElemType> enumerated_void(FuncPtrType func_ptr, ElemType elem_protot
     return result_list;
 }
 
-}
+} // namespace jaws::vulkan

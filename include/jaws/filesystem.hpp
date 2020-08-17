@@ -44,7 +44,7 @@ namespace filesystem = experimental::filesystem;
 namespace FILESYSTEM_NS {
 
 template <typename H>
-H AbslHashValue(H h, const std::filesystem::path& p)
+H AbslHashValue(H h, const std::filesystem::path &p)
 {
     return H::combine(std::move(h), p.string());
 }

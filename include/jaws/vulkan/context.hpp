@@ -20,12 +20,11 @@ namespace jaws::vulkan {
 class JAWS_API Context
 {
 public:
-
     using PresentationSupportCallback = std::function<bool(VkInstance, VkPhysicalDevice, uint32_t)>;
 
     struct CreateInfo
     {
-        const char* app_name = nullptr;
+        const char *app_name = nullptr;
         PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = nullptr;
         ExtensionList required_layers;
         ExtensionList optional_layers;
@@ -38,18 +37,66 @@ public:
         int32_t app_version_patch = 0;
         PresentationSupportCallback presentation_support_callback;
 
-        CreateInfo& set_app_name(const char* v) { app_name = v; return *this; }
-        CreateInfo& set_vkGetInstanceProcAddr(PFN_vkGetInstanceProcAddr v) { vkGetInstanceProcAddr = v; return *this; }
-        CreateInfo& set_required_layers(ExtensionList v) { required_layers = std::move(v); return *this; }
-        CreateInfo& set_optional_layers(ExtensionList v) { optional_layers = std::move(v); return *this; }
-        CreateInfo& set_required_instance_extensions(ExtensionList v) { required_instance_extensions = std::move(v); return *this; }
-        CreateInfo& set_optional_instance_extensions(ExtensionList v) { optional_instance_extensions = std::move(v); return *this; }
-        CreateInfo& set_headless(bool v) { headless = v; return *this; }
-        CreateInfo& set_debugging(bool v) { debugging = v; return *this; }
-        CreateInfo& set_app_version_major(int32_t v) { app_version_major = v; return *this; }
-        CreateInfo& set_app_version_minor(int32_t v) { app_version_minor = v; return *this; }
-        CreateInfo& set_app_version_patch(int32_t v) { app_version_patch = v; return *this; }
-        CreateInfo& set_presentation_support_callback(PresentationSupportCallback v) { presentation_support_callback = v; return *this; }
+        CreateInfo &set_app_name(const char *v)
+        {
+            app_name = v;
+            return *this;
+        }
+        CreateInfo &set_vkGetInstanceProcAddr(PFN_vkGetInstanceProcAddr v)
+        {
+            vkGetInstanceProcAddr = v;
+            return *this;
+        }
+        CreateInfo &set_required_layers(ExtensionList v)
+        {
+            required_layers = std::move(v);
+            return *this;
+        }
+        CreateInfo &set_optional_layers(ExtensionList v)
+        {
+            optional_layers = std::move(v);
+            return *this;
+        }
+        CreateInfo &set_required_instance_extensions(ExtensionList v)
+        {
+            required_instance_extensions = std::move(v);
+            return *this;
+        }
+        CreateInfo &set_optional_instance_extensions(ExtensionList v)
+        {
+            optional_instance_extensions = std::move(v);
+            return *this;
+        }
+        CreateInfo &set_headless(bool v)
+        {
+            headless = v;
+            return *this;
+        }
+        CreateInfo &set_debugging(bool v)
+        {
+            debugging = v;
+            return *this;
+        }
+        CreateInfo &set_app_version_major(int32_t v)
+        {
+            app_version_major = v;
+            return *this;
+        }
+        CreateInfo &set_app_version_minor(int32_t v)
+        {
+            app_version_minor = v;
+            return *this;
+        }
+        CreateInfo &set_app_version_patch(int32_t v)
+        {
+            app_version_patch = v;
+            return *this;
+        }
+        CreateInfo &set_presentation_support_callback(PresentationSupportCallback v)
+        {
+            presentation_support_callback = v;
+            return *this;
+        }
     };
 
     Context();
@@ -57,8 +104,8 @@ public:
     Context &operator=(const Context &) = delete;
     ~Context();
 
-    //static std::vector<const char*> defaultInstanceExtensions(absl::Span<const char* const> extra = {});
-    //static bool extensionListContains(absl::Span<const char* const> list, const char* ext);
+    // static std::vector<const char*> defaultInstanceExtensions(absl::Span<const char* const> extra = {});
+    // static bool extensionListContains(absl::Span<const char* const> list, const char* ext);
 
     void create(const CreateInfo & = jaws::util::make_default<CreateInfo>());
     void destroy();
@@ -75,15 +122,16 @@ private:
     VkDebugReportCallbackEXT _debug_report_callback = VK_NULL_HANDLE;
 
     bool _headless = false;
-
 };
 
-inline VkInstance Context::get_instance() const {
+inline VkInstance Context::get_instance() const
+{
     return _vk_instance;
 }
 
-inline Context::PresentationSupportCallback Context::get_presentation_support_callback() const {
+inline Context::PresentationSupportCallback Context::get_presentation_support_callback() const
+{
     return _presentation_support_callback;
 }
 
-}
+} // namespace jaws::vulkan

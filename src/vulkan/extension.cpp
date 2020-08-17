@@ -9,16 +9,16 @@ namespace jaws::vulkan {
 
 ExtensionList::ExtensionList(std::initializer_list<Extension> es)
 {
-    for (const auto& e : es) { add(e); }
+    for (const auto &e : es) { add(e); }
 }
 
-ExtensionList::ExtensionList(const char** names, uint32_t count)
+ExtensionList::ExtensionList(const char **names, uint32_t count)
 {
     for (uint32_t i = 0; i < count; ++i) { add(Extension(names[i])); }
 }
 
 
-ExtensionList& ExtensionList::add(Extension e)
+ExtensionList &ExtensionList::add(Extension e)
 {
     JAWS_ASSUME(!e.name.empty());
 
@@ -38,14 +38,14 @@ ExtensionList& ExtensionList::add(Extension e)
 }
 
 
-ExtensionList& ExtensionList::add(const ExtensionList& el)
+ExtensionList &ExtensionList::add(const ExtensionList &el)
 {
-    for (const auto& e : el) { add(e); }
+    for (const auto &e : el) { add(e); }
     return *this;
 }
 
 
-bool ExtensionList::contains(const Extension& e) const
+bool ExtensionList::contains(const Extension &e) const
 {
     JAWS_ASSUME(!e.name.empty());
 
@@ -57,11 +57,11 @@ bool ExtensionList::contains(const Extension& e) const
 }
 
 
-ExtensionList operator-(const ExtensionList& as, const ExtensionList& bs)
+ExtensionList operator-(const ExtensionList &as, const ExtensionList &bs)
 {
     ExtensionList leftover;
     if (!as.empty()) {
-        for (const auto& a : as) {
+        for (const auto &a : as) {
             if (!bs.contains(a)) { leftover.add(a); }
         }
     }
@@ -69,17 +69,17 @@ ExtensionList operator-(const ExtensionList& as, const ExtensionList& bs)
 }
 
 
-bool ExtensionList::contains(const ExtensionList& el) const
+bool ExtensionList::contains(const ExtensionList &el) const
 {
     return (el - *this).empty();
 }
 
 
-std::vector<const char*> ExtensionList::as_char_ptrs() const
+std::vector<const char *> ExtensionList::as_char_ptrs() const
 {
-    std::vector<const char*> r;
+    std::vector<const char *> r;
     r.reserve(_exts.size());
-    for (const auto& e : _exts) { r.push_back(e.second.name.c_str()); }
+    for (const auto &e : _exts) { r.push_back(e.second.name.c_str()); }
     return r;
 }
 
@@ -108,11 +108,11 @@ ExtensionList::ConstIterator ExtensionList::end() const
 }
 
 
-std::string ExtensionList::to_string(bool verbose, const std::string& separator) const
+std::string ExtensionList::to_string(bool verbose, const std::string &separator) const
 {
     std::ostringstream oss;
     bool first = true;
-    for (const auto& e : _exts) {
+    for (const auto &e : _exts) {
         if (!first) { oss << ", "; }
         oss << e.second.name;
         if (verbose && e.second.version != 0) { oss << " (" << version_to_string(e.second.version) << ")"; }
@@ -123,10 +123,10 @@ std::string ExtensionList::to_string(bool verbose, const std::string& separator)
 
 
 ExtensionList ExtensionList::resolve(
-    const ExtensionList& available,
-    const ExtensionList& required,
-    const ExtensionList& optional,
-    std::string* out_error_msg)
+    const ExtensionList &available,
+    const ExtensionList &required,
+    const ExtensionList &optional,
+    std::string *out_error_msg)
 {
     JAWS_ASSUME(out_error_msg);
     ExtensionList missing_req = required - available;
@@ -136,7 +136,7 @@ ExtensionList ExtensionList::resolve(
     };
 
     ExtensionList r = required;
-    for (const auto& e : optional) {
+    for (const auto &e : optional) {
         if (!r.contains(e) && available.contains(e)) { r.add(e); }
     }
     return r;

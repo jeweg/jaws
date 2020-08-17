@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "jaws/core.hpp"
 #include "jaws/logging.hpp"
 
@@ -16,8 +16,7 @@ public:
     // Also it makes little sense to have a class called "Indentation" do no
     // indentation by default, so I don't think it's a confusing interpretation of the default.
     Indentation(const int initial_indent_level = 0, const std::string_view indent_step = {}) :
-        _indent_level(initial_indent_level),
-        _indent_step(indent_step)
+        _indent_level(initial_indent_level), _indent_step(indent_step)
     {
         if (_indent_step.empty()) { _indent_step = DefaultIndentStep; }
     }
@@ -42,30 +41,30 @@ public:
 public:
     struct Scoped
     {
-        Scoped(Indentation& indentation, int delta = 1) : _indentation(indentation), _delta(delta)
+        Scoped(Indentation &indentation, int delta = 1) : _indentation(indentation), _delta(delta)
         {
             _indentation.ChangeLevel(_delta);
         }
 
         ~Scoped() { _indentation.ChangeLevel(-_delta); }
 
-        Scoped(Scoped&) = delete;
-        Scoped& operator=(Scoped&) = delete;
+        Scoped(Scoped &) = delete;
+        Scoped &operator=(Scoped &) = delete;
 
         // Can't write to the wrapped reference.
-        Scoped& operator=(Scoped&& rhs) = delete;
+        Scoped &operator=(Scoped &&rhs) = delete;
 
         // This allows us to return Scoped objects from e.g.
         // factory functions while still balacing out the indentation
         // level properly.
-        Scoped(Scoped&& rhs) : _indentation(rhs._indentation), _delta(rhs._delta)
+        Scoped(Scoped &&rhs) : _indentation(rhs._indentation), _delta(rhs._delta)
         {
             // Effectively neuter the moved-from object.
             rhs._delta = 0;
         }
 
     private:
-        Indentation& _indentation;
+        Indentation &_indentation;
         int _delta;
     };
 
@@ -81,19 +80,17 @@ private:
 
 class IndentationLogger
 {
-    jaws::Logger& _logger;
+    jaws::Logger &_logger;
     jaws::LogLevel _log_level;
     Indentation _indentation;
 
 public:
     IndentationLogger(
-        jaws::Logger& logger,
+        jaws::Logger &logger,
         const jaws::LogLevel log_level = spdlog::level::level_enum::info,
         const int initial_indent_level = 0,
-        const std::string& indent_step = {}) :
-        _logger(logger),
-        _log_level(log_level),
-        _indentation(initial_indent_level, indent_step)
+        const std::string &indent_step = {}) :
+        _logger(logger), _log_level(log_level), _indentation(initial_indent_level, indent_step)
     {}
 
     void ChangeLevel(int delta) { _indentation.ChangeLevel(delta); }
@@ -101,13 +98,13 @@ public:
     Indentation::Scoped Indented(int delta = 1) { return std::move(_indentation.Indented(delta)); }
 
     template <typename... Args>
-    void operator()(const char* format, const Args&... args)
+    void operator()(const char *format, const Args &... args)
     {
         Log(format, args...);
     }
 
     template <typename... Args>
-    void Log(const char* format, const Args&... args)
+    void Log(const char *format, const Args &... args)
     {
         _logger.log(_log_level, (_indentation.Get() + format).c_str(), args...);
     }

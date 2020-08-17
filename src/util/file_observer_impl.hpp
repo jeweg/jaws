@@ -14,7 +14,7 @@ namespace std {
 template <>
 struct hash<fs::path>
 {
-    size_t operator()(std::filesystem::path const& s) const noexcept { return std::hash<std::string>{}(s.string()); }
+    size_t operator()(std::filesystem::path const &s) const noexcept { return std::hash<std::string>{}(s.string()); }
 };
 } // namespace std
 
@@ -22,10 +22,8 @@ namespace jaws::util::detail {
 
 struct FileStatus
 {
-    explicit FileStatus(const fs::path& path, FileObserver::Handle handle) :
-        canon_file_path(path),
-        handle(handle),
-        existed(fs::exists(path))
+    explicit FileStatus(const fs::path &path, FileObserver::Handle handle) :
+        canon_file_path(path), handle(handle), existed(fs::exists(path))
     {
         if (existed) { last_write_time = fs::last_write_time(path); }
     }
@@ -41,13 +39,13 @@ class FileObserverImpl
 {
     absl::flat_hash_map<FileObserver::Handle, FileStatus> file_status_map;
 
-    static FileObserver::Handle GetHandleForPath(const fs::path& path)
+    static FileObserver::Handle GetHandleForPath(const fs::path &path)
     {
         return static_cast<FileObserver::Handle>(absl::Hash<std::string>{}(path.string()));
     }
 
 public:
-    FileObserver::Handle AddObservedFile(const fs::path& file_path)
+    FileObserver::Handle AddObservedFile(const fs::path &file_path)
     {
         fs::path canon_file_path = fs::canonical(file_path);
         FileObserver::Handle handle = GetHandleForPath(canon_file_path);
@@ -76,14 +74,14 @@ public:
     std::vector<FileObserver::Result> Poll()
     {
         std::vector<FileObserver::Result> results;
-        for (auto& iter : file_status_map) {
-            FileStatus& file_status = iter.second;
+        for (auto &iter : file_status_map) {
+            FileStatus &file_status = iter.second;
             bool exists_now = fs::exists(file_status.canon_file_path);
             if (file_status.existed != exists_now) {
-                results.emplace_back(
-                    FileObserver::Result{file_status.handle,
-                                         file_status.canon_file_path,
-                                         exists_now ? FileObserver::Event::Created : FileObserver::Event::Deleted});
+                results.emplace_back(FileObserver::Result{
+                    file_status.handle,
+                    file_status.canon_file_path,
+                    exists_now ? FileObserver::Event::Created : FileObserver::Event::Deleted});
                 file_status.existed = !file_status.existed;
             } else {
                 auto last_write_time_now = fs::last_write_time(file_status.canon_file_path);

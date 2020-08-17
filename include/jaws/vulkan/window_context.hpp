@@ -25,19 +25,31 @@ public:
         bool enable_vsync = true;
         bool allow_frame_drops = false;
 
-        CreateInfo& set_surface(VkSurfaceKHR v) { surface = v; return *this; }
-        CreateInfo& set_enable_vsync(VkSurfaceKHR v) { enable_vsync = v; return *this; }
-        CreateInfo& set_allow_frame_drops(VkSurfaceKHR v) { allow_frame_drops = v; return *this; }
+        CreateInfo &set_surface(VkSurfaceKHR v)
+        {
+            surface = v;
+            return *this;
+        }
+        CreateInfo &set_enable_vsync(VkSurfaceKHR v)
+        {
+            enable_vsync = v;
+            return *this;
+        }
+        CreateInfo &set_allow_frame_drops(VkSurfaceKHR v)
+        {
+            allow_frame_drops = v;
+            return *this;
+        }
     };
 
-    void create(Device* device, const CreateInfo & = jaws::util::make_default<CreateInfo>());
+    void create(Device *device, const CreateInfo & = jaws::util::make_default<CreateInfo>());
     void destroy();
 
 private:
     void create_swap_chain(uint32_t width, uint32_t height);
 
 private:
-    Device* _device = nullptr;
+    Device *_device = nullptr;
     VkSurfaceKHR _surface;
     bool _enable_vsync;
     bool _allow_frame_drops;
@@ -50,4 +62,4 @@ private:
     size_t swapchain_parameter_hash = 0;
 };
 
-};
+}; // namespace jaws::vulkan

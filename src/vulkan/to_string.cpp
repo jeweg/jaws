@@ -34,7 +34,7 @@ std::string instance_properties_to_string()
     sb.append_format("global extensions ({}):", instance_exts.size());
     {
         auto _ = sb.indent_guard();
-        for (const auto& [i, total, props] : jaws::util::enumerate_range_total(instance_exts)) {
+        for (const auto &[i, total, props] : jaws::util::enumerate_range_total(instance_exts)) {
             sb.append_format(
                 "[{}/{}] extensionName: {}, version: {}",
                 i,
@@ -48,7 +48,7 @@ std::string instance_properties_to_string()
     sb.append_format("layers ({}):", layer_list.size());
     {
         auto _ = sb.indent_guard();
-        for (const auto& [i, total, props] : jaws::util::enumerate_range_total(layer_list)) {
+        for (const auto &[i, total, props] : jaws::util::enumerate_range_total(layer_list)) {
             sb.append_format("[{}/{}] layerName: {}", i, total, props.layerName);
             auto _ = sb.indent_guard();
             sb.append_format("description: {} ", props.description);
@@ -60,7 +60,7 @@ std::string instance_properties_to_string()
             if (!layer_ext_props.empty()) {
                 sb.append("extensions:");
                 auto _ = sb.indent_guard();
-                for (const auto& layer_ext_prop : layer_ext_props) {
+                for (const auto &layer_ext_prop : layer_ext_props) {
                     sb.append_format(
                         "extensionName: {}, version: {}",
                         layer_ext_prop.extensionName,
@@ -73,7 +73,7 @@ std::string instance_properties_to_string()
 }
 
 
-std::string queue_family_properties_to_string(const Device& device)
+std::string queue_family_properties_to_string(const Device &device)
 {
     VkQueueFamilyProperties2 elem = {};
     elem.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
@@ -82,7 +82,7 @@ std::string queue_family_properties_to_string(const Device& device)
     jaws::util::StringLinesBuilder sb;
     sb.append_format("queue family properties ({}):", all_family_props.size());
     sb.indent();
-    for (const auto& [i, total, family_props] : jaws::util::enumerate_range_total(all_family_props)) {
+    for (const auto &[i, total, family_props] : jaws::util::enumerate_range_total(all_family_props)) {
         std::vector<std::string> caps_strs;
         if (family_props.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             caps_strs.emplace_back("Graphics");
@@ -99,7 +99,7 @@ std::string queue_family_properties_to_string(const Device& device)
     return sb.str();
 }
 
-std::string surface_capabilities_to_string(const Device& device, VkSurfaceKHR surface)
+std::string surface_capabilities_to_string(const Device &device, VkSurfaceKHR surface)
 {
     VkResult result;
     VkPhysicalDeviceSurfaceInfo2KHR surface_info = {};
@@ -108,7 +108,7 @@ std::string surface_capabilities_to_string(const Device& device, VkSurfaceKHR su
     VkSurfaceCapabilities2KHR caps2 = {};
     caps2.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
     result = vkGetPhysicalDeviceSurfaceCapabilities2KHR(device.get_physical_device(), &surface_info, &caps2);
-    const VkSurfaceCapabilitiesKHR& caps = caps2.surfaceCapabilities;
+    const VkSurfaceCapabilitiesKHR &caps = caps2.surfaceCapabilities;
 
     /*
 typedef struct VkSurfaceCapabilitiesKHR {

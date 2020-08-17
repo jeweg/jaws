@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <typeinfo>
 
 #if defined WIN32 || defined _WIN32
@@ -57,17 +57,17 @@
 #endif
 
 #if defined(__ICC)
-#define JAWS_DEPRECATED __attribute__((deprecated))
-#define JAWS_DEPRECATED_MSG __attribute__((deprecated))
+#    define JAWS_DEPRECATED __attribute__((deprecated))
+#    define JAWS_DEPRECATED_MSG __attribute__((deprecated))
 #elif defined(__GNUC__)
-#define JAWS_DEPRECATED __attribute__((deprecated))
-#define JAWS_DEPRECATED_MSG(msg) __attribte__((deprecated(msg)))
+#    define JAWS_DEPRECATED __attribute__((deprecated))
+#    define JAWS_DEPRECATED_MSG(msg) __attribte__((deprecated(msg)))
 #elif defined(_MSC_VER)
-#define JAWS_DEPRECATED __declspec(deprecated)
-#define JAWS_DEPRECATED_MSG(msg) __declspec(deprecated(msg))
+#    define JAWS_DEPRECATED __declspec(deprecated)
+#    define JAWS_DEPRECATED_MSG(msg) __declspec(deprecated(msg))
 #else
-#define JAWS_DEPRECATED 
-#define JAWS_DEPRECATED_MSG(msg) 
+#    define JAWS_DEPRECATED
+#    define JAWS_DEPRECATED_MSG(msg)
 #endif
 
 // TODO: maybe move elsewhere.
@@ -75,17 +75,16 @@ namespace jaws {
 
 #if defined(JAWS_RTTI_ENABLED)
 template <typename T>
-constexpr const char* get_rtti_type_name()
+constexpr const char *get_rtti_type_name()
 {
     return typeid(T).name();
 }
 #else
 template <typename T>
-constexpr const char* get_rtti_type_name()
+constexpr const char *get_rtti_type_name()
 {
     return "";
 }
 #endif
 
 } // namespace jaws
-

@@ -20,17 +20,17 @@ public:
         ExtensionList required_extensions;
         ExtensionList optional_extensions;
 
-        CreateInfo& set_gpu_group_index(uint32_t v)
+        CreateInfo &set_gpu_group_index(uint32_t v)
         {
             gpu_group_index = v;
             return *this;
         }
-        CreateInfo& set_required_extensions(ExtensionList v)
+        CreateInfo &set_required_extensions(ExtensionList v)
         {
             required_extensions = std::move(v);
             return *this;
         }
-        CreateInfo& set_optional_extensions(ExtensionList v)
+        CreateInfo &set_optional_extensions(ExtensionList v)
         {
             optional_extensions = std::move(v);
             return *this;
@@ -38,18 +38,18 @@ public:
     };
 
     Device();
-    Device(const Device&) = delete;
-    Device& operator=(const Device&) = delete;
+    Device(const Device &) = delete;
+    Device &operator=(const Device &) = delete;
     ~Device();
 
-    void create(Context*, const CreateInfo& = jaws::util::make_default<CreateInfo>());
+    void create(Context *, const CreateInfo & = jaws::util::make_default<CreateInfo>());
     void destroy();
 
     void wait_idle();
 
     VkInstance get_instance() const { return _vk_instance; }
 
-    Context* get_context() const { return _context; }
+    Context *get_context() const { return _context; }
     VkDevice get_device() const { return _device; }
 
     VkPhysicalDevice get_physical_device(uint32_t index = 0) const;
@@ -67,9 +67,9 @@ public:
     VkQueue get_queue(Queue q);
     uint32_t get_queue_family(Queue q) const;
 
-    ShaderPtr get_shader(const ShaderCreateInfo&);
+    Shader get_shader(const ShaderCreateInfo &);
 
-    const VolkDeviceTable& vk() const;
+    const VolkDeviceTable &vk() const;
 
 
     // const ExtensionList& get_extensions() const;
@@ -80,7 +80,7 @@ public:
 
 private:
     friend Context;
-    Context* _context = nullptr;
+    Context *_context = nullptr;
 
     VkInstance _vk_instance;
     VkPhysicalDeviceGroupProperties _gpu_group;
@@ -101,8 +101,8 @@ private:
         size_t unique_queue_index = 0;
     };
     std::array<QueueInfo, static_cast<size_t>(Queue::ELEM_COUNT)> _queue_infos;
-    QueueInfo& get_queue_info(Queue q);
-    const QueueInfo& get_queue_info(Queue q) const;
+    QueueInfo &get_queue_info(Queue q);
+    const QueueInfo &get_queue_info(Queue q) const;
 
     // std::unique_ptr<Sediment> _sediment;
     std::unique_ptr<ShaderSystem> _shader_system;
@@ -128,21 +128,21 @@ inline uint32_t Device::get_queue_family(Queue q) const
 }
 
 
-inline Device::QueueInfo& Device::get_queue_info(Queue q)
+inline Device::QueueInfo &Device::get_queue_info(Queue q)
 {
     JAWS_ASSUME(q != Queue::ELEM_COUNT);
     return _queue_infos[static_cast<size_t>(q)];
 }
 
 
-inline const Device::QueueInfo& Device::get_queue_info(Queue q) const
+inline const Device::QueueInfo &Device::get_queue_info(Queue q) const
 {
     JAWS_ASSUME(q != Queue::ELEM_COUNT);
     return _queue_infos[static_cast<size_t>(q)];
 }
 
 
-inline const VolkDeviceTable& Device::vk() const
+inline const VolkDeviceTable &Device::vk() const
 {
     return _f;
 };

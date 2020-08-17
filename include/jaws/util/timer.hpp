@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "jaws/core.hpp"
 
 namespace jaws::util {

@@ -1,4 +1,4 @@
-﻿#include "pch.hpp"
+#include "pch.hpp"
 #include "jaws/jaws.hpp"
 #include "jaws/fatal.hpp"
 #include "debugbreak.h"
@@ -21,15 +21,13 @@ std::string get_formatted_stackframes(int stackframes_skipped)
         return true;
     }();
 
-    static void* result[50];
+    static void *result[50];
     static int sizes[50];
     int num_frames = absl::GetStackFrames(result, sizes, sizeof(result) / sizeof(result[0]), stackframes_skipped);
     static char buffer[2000];
     std::ostringstream oss;
 
-    if (stackframes_skipped > 0) {
-        oss << fmt::format("...{} stackframes skipped...\n", stackframes_skipped);
-    }
+    if (stackframes_skipped > 0) { oss << fmt::format("...{} stackframes skipped...\n", stackframes_skipped); }
 
     for (int i = 0; i < num_frames; ++i) {
         absl::Symbolize(result[i], buffer, sizeof(buffer));
@@ -42,13 +40,18 @@ std::string get_formatted_stackframes(int stackframes_skipped)
 
 
 /// Building block for fatal handler.
-void LogFatalError(FatalError error_code, std::string_view msg, const char* function, const char* file, long line,
-    bool stackframes, int stackframes_skipped)
+void LogFatalError(
+    FatalError error_code,
+    std::string_view msg,
+    const char *function,
+    const char *file,
+    long line,
+    bool stackframes,
+    int stackframes_skipped)
 {
     using std::to_string;
-    auto& logger = get_logger(Category::General);
+    auto &logger = get_logger(Category::General);
     if (stackframes) {
-
         logger.critical(
             "jaws fatal error: \"{}\" ({}) in function '{}' at {}:{}\nBacktrace:\n{}",
             msg,
@@ -59,7 +62,6 @@ void LogFatalError(FatalError error_code, std::string_view msg, const char* func
             detail::get_formatted_stackframes(stackframes_skipped));
 
     } else {
-
         logger.critical(
             "jaws fatal error: \"{}\" ({}) in function '{}' at {}:{}",
             msg,
@@ -67,13 +69,12 @@ void LogFatalError(FatalError error_code, std::string_view msg, const char* func
             function,
             file,
             line);
-
     }
     logger.flush();
 }
 
 
-void DefaultFatalHandler(FatalError error_code, std::string_view msg, const char* function, const char* file, long line)
+void DefaultFatalHandler(FatalError error_code, std::string_view msg, const char *function, const char *file, long line)
 {
     LogFatalError(error_code, msg, function, file, line, true, 5);
 
@@ -81,7 +82,7 @@ void DefaultFatalHandler(FatalError error_code, std::string_view msg, const char
     debug_break();
     // and also maybe on Windows: force a segmentation fault here so we get the option of starting a debugger
     // if we're not already running in one (in which case debug_break will not do anything).
-    *((int*)0) = 0;
+    *((int *)0) = 0;
 
     std::abort();
 }

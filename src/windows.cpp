@@ -1,4 +1,4 @@
-﻿#if _WIN32
+#if _WIN32
 
 #    include "pch.hpp"
 #    include "jaws/windows.hpp"

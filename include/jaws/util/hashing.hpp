@@ -28,9 +28,9 @@ struct Prehashed
 
 
 template <typename... Args>
-size_t combined_hash(const Args&... args)
+size_t combined_hash(const Args &... args)
 {
-    using TupleType = std::tuple<const Args&...>;
+    using TupleType = std::tuple<const Args &...>;
     TupleType t = std::make_tuple(args...);
     return absl::Hash<TupleType>{}(t);
 }

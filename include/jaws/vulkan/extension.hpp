@@ -12,7 +12,7 @@ struct JAWS_API Extension
     std::string name;
     uint32_t version = 0;
 
-    Extension(const char* name, uint32_t version = 0) : name(name), version(version) {}
+    Extension(const char *name, uint32_t version = 0) : name(name), version(version) {}
     Extension(std::string name, uint32_t version = 0) : name(std::move(name)), version(version) {}
 };
 
@@ -23,36 +23,36 @@ class JAWS_API ExtensionList
 public:
     ExtensionList() = default;
     ExtensionList(std::initializer_list<Extension>);
-    ExtensionList(const char**, uint32_t);
+    ExtensionList(const char **, uint32_t);
 
-    ExtensionList& add(Extension);
-    ExtensionList& add(const ExtensionList&);
-    bool contains(const Extension&) const;
-    bool contains(const ExtensionList&) const;
+    ExtensionList &add(Extension);
+    ExtensionList &add(const ExtensionList &);
+    bool contains(const Extension &) const;
+    bool contains(const ExtensionList &) const;
 
     size_t size() const { return _exts.size(); }
     bool empty() const { return _exts.empty(); }
 
     // Careful, don't keep this around, it will not necessarily
     // survive another operation on this instance.
-    std::vector<const char*> as_char_ptrs() const;
+    std::vector<const char *> as_char_ptrs() const;
 
-    friend ExtensionList operator-(const ExtensionList&, const ExtensionList&);
+    friend ExtensionList operator-(const ExtensionList &, const ExtensionList &);
 
     static ExtensionList resolve(
-        const ExtensionList& available,
-        const ExtensionList& required,
-        const ExtensionList& optional,
-        std::string* out_error_msg);
+        const ExtensionList &available,
+        const ExtensionList &required,
+        const ExtensionList &optional,
+        std::string *out_error_msg);
 
-    std::string to_string(bool verbose, const std::string& separator = ", ") const;
+    std::string to_string(bool verbose, const std::string &separator = ", ") const;
 
     class ConstIterator
     {
     public:
-        friend bool operator==(const ConstIterator& lhs, const ConstIterator& rhs) { return lhs._iter == rhs._iter; }
-        friend bool operator!=(const ConstIterator& lhs, const ConstIterator& rhs) { return !(lhs == rhs); }
-        const Extension& operator*() { return _iter->second; }
+        friend bool operator==(const ConstIterator &lhs, const ConstIterator &rhs) { return lhs._iter == rhs._iter; }
+        friend bool operator!=(const ConstIterator &lhs, const ConstIterator &rhs) { return !(lhs == rhs); }
+        const Extension &operator*() { return _iter->second; }
         auto operator++()
         {
             ++_iter;

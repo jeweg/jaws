@@ -16,10 +16,10 @@ Device::~Device()
 }
 
 
-void Device::create(Context* context, const CreateInfo& ci)
+void Device::create(Context *context, const CreateInfo &ci)
 {
     VkResult result;
-    auto& logger = get_logger(Category::Vulkan);
+    auto &logger = get_logger(Category::Vulkan);
 
     JAWS_ASSUME(context);
 
@@ -62,7 +62,7 @@ void Device::create(Context* context, const CreateInfo& ci)
         optional_extensions.add("VK_EXT_validation_cache");
 
         ExtensionList avail_extensions;
-        for (const auto& props :
+        for (const auto &props :
              enumerated(vkEnumerateDeviceExtensionProperties, VkExtensionProperties{}, pd, nullptr)) {
             avail_extensions.add(Extension(props.extensionName, props.specVersion));
         }
@@ -119,7 +119,7 @@ void Device::create(Context* context, const CreateInfo& ci)
     std::vector<int> family_bits;
     family_bits.resize(all_family_props.size());
 
-    for (const auto& [i, family_props] : jaws::util::enumerate_range(all_family_props)) {
+    for (const auto &[i, family_props] : jaws::util::enumerate_range(all_family_props)) {
         int fb = 0;
         // Note that graphics or compute capability implies transfer capability.
         if (family_props.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -263,10 +263,10 @@ void Device::create(Context* context, const CreateInfo& ci)
             queue_cis.push_back(queue_ci);
         };
 
-        for (auto& qi : _queue_infos) {
+        for (auto &qi : _queue_infos) {
             // family already requested?
             bool family_handled = false;
-            for (auto const& ci : queue_cis) {
+            for (auto const &ci : queue_cis) {
                 if (ci.queueFamilyIndex == qi.family_index) {
                     family_handled = true;
                     break;
@@ -298,7 +298,7 @@ void Device::create(Context* context, const CreateInfo& ci)
 
         _has_cap_validation_cache = _extensions.contains("VK_EXT_validation_cache");
     }
-    logger.info("device: {}", (void*)_device);
+    logger.info("device: {}", (void *)_device);
 
     //=========================================================================
 
@@ -308,10 +308,10 @@ void Device::create(Context* context, const CreateInfo& ci)
     // Retrieve queue objects. We need them later.
 
     _unique_queues.assign(queue_cis.size(), VK_NULL_HANDLE);
-    for (const auto& [i, qci] : jaws::util::enumerate_range(queue_cis)) {
+    for (const auto &[i, qci] : jaws::util::enumerate_range(queue_cis)) {
         _f.vkGetDeviceQueue(_device, qci.queueFamilyIndex, 0, &_unique_queues[i]);
         // For each queue info using that family, set the unique queue index.
-        for (auto& qi : _queue_infos) {
+        for (auto &qi : _queue_infos) {
             if (qi.family_index == qci.queueFamilyIndex) { qi.unique_queue_index = i; }
         }
     }
@@ -375,7 +375,7 @@ void Device::create(Context* context, const CreateInfo& ci)
 
 void Device::destroy()
 {
-    if (_device != VK_NULL_HANDLE) {
+    if (_device) {
         vmaDestroyAllocator(_vma_allocator);
         _f.vkDestroyDevice(_device, nullptr);
         _device = VK_NULL_HANDLE;
@@ -389,7 +389,7 @@ void Device::wait_idle()
 }
 
 
-ShaderPtr Device::get_shader(const ShaderCreateInfo& ci)
+Shader Device::get_shader(const ShaderCreateInfo &ci)
 {
     if (!_shader_system) {
         _shader_system = std::make_unique<ShaderSystem>();

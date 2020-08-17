@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // This is the precompiled header file.
 

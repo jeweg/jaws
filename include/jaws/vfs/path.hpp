@@ -25,14 +25,14 @@ public:
 
     Path() = default;
 
-    Path(const std::string& s);
-    Path(const char* chars);
+    Path(const std::string &s);
+    Path(const char *chars);
 
-    Path(const Path& other);
-    Path(Path&& other) noexcept;
+    Path(const Path &other);
+    Path(Path &&other) noexcept;
 
-    Path& operator=(const Path& p);
-    Path& operator=(const Path&& p) noexcept;
+    Path &operator=(const Path &p);
+    Path &operator=(const Path &&p) noexcept;
 
     Path get_parent_path() const;
 
@@ -50,10 +50,10 @@ public:
 
     std::string string() const { return _str; }
     std::string_view string_view() const { return _str; }
-    const char* c_str() const { return _str.c_str(); }
+    const char *c_str() const { return _str.c_str(); }
 
-    friend bool operator==(const Path& l, const Path& r) { return l._str == r._str; }
-    friend bool operator!=(const Path& l, const Path& r) { return !(l == r); }
+    friend bool operator==(const Path &l, const Path &r) { return l._str == r._str; }
+    friend bool operator!=(const Path &l, const Path &r) { return !(l == r); }
 
     size_t get_hash_value() const
     {
@@ -61,10 +61,10 @@ public:
         return _hash;
     }
 
-    friend Path operator/(const Path& l, const Path& r);
+    friend Path operator/(const Path &l, const Path &r);
 
     template <typename H>
-    friend H AbslHashValue(H h, const Path& p)
+    friend H AbslHashValue(H h, const Path &p)
     {
         return H::combine(std::move(h), jaws::util::Prehashed(p.get_hash_value()));
     }
@@ -89,7 +89,7 @@ namespace std {
 template <>
 struct hash<jaws::vfs::Path>
 {
-    size_t operator()(const jaws::vfs::Path& p) const { return p.get_hash_value(); }
+    size_t operator()(const jaws::vfs::Path &p) const { return p.get_hash_value(); }
 };
 
 }; // namespace std
@@ -99,7 +99,7 @@ struct fmt::formatter<jaws::vfs::Path> : formatter<absl::string_view>
 {
     // parse is inherited from formatter<string_view>.
     template <typename FormatContext>
-    auto format(const jaws::vfs::Path& p, FormatContext& ctx)
+    auto format(const jaws::vfs::Path &p, FormatContext &ctx)
     {
         return formatter<absl::string_view>::format(p.string_view(), ctx);
     }

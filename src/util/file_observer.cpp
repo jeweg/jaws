@@ -12,7 +12,7 @@ FileObserver::FileObserver()
 FileObserver::~FileObserver() = default;
 
 
-FileObserver::Handle FileObserver::AddObservedFile(const std::filesystem::path& path)
+FileObserver::Handle FileObserver::AddObservedFile(const std::filesystem::path &path)
 {
     return _impl->AddObservedFile(path);
 }

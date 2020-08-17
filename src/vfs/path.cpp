@@ -3,19 +3,19 @@
 
 namespace jaws::vfs {
 
-Path::Path(const std::string& s) : _str(s) {}
+Path::Path(const std::string &s) : _str(s) {}
 
 
-Path::Path(const char* chars) : _str(chars) {}
+Path::Path(const char *chars) : _str(chars) {}
 
 
-Path::Path(const Path& other) : _str(other._str), _hash(other._hash) {}
+Path::Path(const Path &other) : _str(other._str), _hash(other._hash) {}
 
 
-Path::Path(Path&& other) noexcept : _str(std::move(other._str)), _hash(other._hash) {}
+Path::Path(Path &&other) noexcept : _str(std::move(other._str)), _hash(other._hash) {}
 
 
-Path& Path::operator=(const Path& p)
+Path &Path::operator=(const Path &p)
 {
     _str = p._str;
     _hash = p._hash;
@@ -24,7 +24,7 @@ Path& Path::operator=(const Path& p)
 }
 
 
-Path& Path::operator=(const Path&& p) noexcept
+Path &Path::operator=(const Path &&p) noexcept
 {
     _str = std::move(p._str);
     _hash = p._hash;
@@ -63,7 +63,7 @@ bool Path::is_relative() const
 }
 
 
-Path operator/(const Path& l, const Path& r)
+Path operator/(const Path &l, const Path &r)
 {
     // We ignore the domain of r. If it isn't the same, the resulting path
     // doesn't make much sense, but that's on the user.
@@ -90,11 +90,11 @@ void Path::parse() const
 {
     if (is_parsed()) { return; }
 
-    for (auto& part : _parts) { part = {}; };
+    for (auto &part : _parts) { part = {}; };
     static constexpr auto np = std::string::npos;
     const size_t size = _str.size();
     if (size > 0) {
-        const char* chs = _str.c_str();
+        const char *chs = _str.c_str();
         auto set_part_from_range = [this, chs, size](Path::Part part, size_t pos_begin, size_t pos_end_excl) {
             if (pos_begin != np && pos_end_excl != np && pos_begin < size && pos_end_excl > pos_begin) {
                 _parts[static_cast<size_t>(part)] = std::string_view(&chs[pos_begin], pos_end_excl - pos_begin);

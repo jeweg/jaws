@@ -21,7 +21,7 @@ public:
     using Handle = std::uint64_t;
     static constexpr Handle INVALID_HANDLE = std::numeric_limits<std::uint64_t>::max();
 
-    Handle AddObservedFile(const std::filesystem::path&);
+    Handle AddObservedFile(const std::filesystem::path &);
     bool RemoveObservedFile(Handle);
 
     enum class Event

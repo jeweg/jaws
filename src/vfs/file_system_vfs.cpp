@@ -13,8 +13,8 @@ namespace detail {
 // RAII
 struct FileHandle
 {
-    FILE* handle = nullptr;
-    FileHandle(const fs::path& path) { handle = fopen(path.string().c_str(), "r"); }
+    FILE *handle = nullptr;
+    FileHandle(const fs::path &path) { handle = fopen(path.string().c_str(), "r"); }
     ~FileHandle()
     {
         if (handle) { fclose(handle); }
@@ -23,10 +23,10 @@ struct FileHandle
 
 } // namespace detail
 
-FileSystemVfs::FileSystemVfs(const std::filesystem::path& root) : _root(root) {}
+FileSystemVfs::FileSystemVfs(const std::filesystem::path &root) : _root(root) {}
 
 
-fs::path FileSystemVfs::to_actual_path(const Path& path) const
+fs::path FileSystemVfs::to_actual_path(const Path &path) const
 {
     fs::path fs_path = _root / fs::path(path.get_path());
     while (fs::is_symlink(fs_path)) { fs_path = fs::read_symlink(fs_path); }
@@ -34,7 +34,7 @@ fs::path FileSystemVfs::to_actual_path(const Path& path) const
 }
 
 
-bool FileSystemVfs::is_file(const Path& path) const
+bool FileSystemVfs::is_file(const Path &path) const
 {
     std::error_code ec;
     bool r = fs::is_regular_file(to_actual_path(path), ec);
@@ -43,7 +43,7 @@ bool FileSystemVfs::is_file(const Path& path) const
 }
 
 
-bool FileSystemVfs::is_dir(const Path& path) const
+bool FileSystemVfs::is_dir(const Path &path) const
 {
     std::error_code ec;
     bool r = fs::is_directory(to_actual_path(path));
@@ -52,7 +52,7 @@ bool FileSystemVfs::is_dir(const Path& path) const
 }
 
 
-size_t FileSystemVfs::get_file_size(const Path& path) const
+size_t FileSystemVfs::get_file_size(const Path &path) const
 {
     std::error_code ec;
     size_t r = fs::file_size(to_actual_path(path));
@@ -61,7 +61,7 @@ size_t FileSystemVfs::get_file_size(const Path& path) const
 }
 
 
-size_t FileSystemVfs::read_full(const Path& path, uint8_t* write_ptr, size_t* out_fingerprint) const
+size_t FileSystemVfs::read_full(const Path &path, uint8_t *write_ptr, size_t *out_fingerprint) const
 {
     fs::path p = to_actual_path(path);
     detail::FileHandle fh(p);
@@ -75,7 +75,7 @@ size_t FileSystemVfs::read_full(const Path& path, uint8_t* write_ptr, size_t* ou
 }
 
 
-size_t FileSystemVfs::read_bytes(const Path& path, uint8_t* write_ptr, size_t offset, size_t num_bytes) const
+size_t FileSystemVfs::read_bytes(const Path &path, uint8_t *write_ptr, size_t offset, size_t num_bytes) const
 {
     fs::path p = to_actual_path(path);
     detail::FileHandle fh(p);
@@ -94,7 +94,7 @@ size_t FileSystemVfs::read_bytes(const Path& path, uint8_t* write_ptr, size_t of
 
 
 bool FileSystemVfs::get_file_contents(
-    const Path& path, std::vector<uint8_t>* out_contents, size_t offset_bytes, size_t num_bytes) const
+    const Path &path, std::vector<uint8_t> *out_contents, size_t offset_bytes, size_t num_bytes) const
 {
     fs::path p = to_actual_path(path);
     return get_file_contents(p, out_contents, offset_bytes, num_bytes);
@@ -102,9 +102,9 @@ bool FileSystemVfs::get_file_contents(
 
 
 bool FileSystemVfs::get_file_contents(
-    const std::filesystem::path& p, std::vector<uint8_t>* out_contents, size_t offset_bytes, size_t num_bytes) const
+    const std::filesystem::path &p, std::vector<uint8_t> *out_contents, size_t offset_bytes, size_t num_bytes) const
 {
-    FILE* handle = fopen(p.string().c_str(), "r");
+    FILE *handle = fopen(p.string().c_str(), "r");
     if (!handle) { return false; }
     std::fseek(handle, 0, SEEK_END);
     size_t file_size = std::ftell(handle);
@@ -119,7 +119,7 @@ bool FileSystemVfs::get_file_contents(
     return true;
 }
 
-size_t FileSystemVfs::get_file_fingerprint(const Path& path, bool force_exact) const
+size_t FileSystemVfs::get_file_fingerprint(const Path &path, bool force_exact) const
 {
     constexpr size_t MAX_BYTES_TO_HASH = 1024 * 1024 * 1; // 1 MiB
 
