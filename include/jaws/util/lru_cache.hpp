@@ -21,15 +21,15 @@ private:
     uint32_t _clock = 0;
     struct Element
     {
-        Element() = delete;
-        Element(const Element&) = delete;
-        Element& operator=(const Element&) = delete;
+        Element(Element &&) = default;
+        Element &operator=(Element &&) = default;
+
+        Element(const Element &) = delete;
+        Element &operator=(const Element &) = delete;
 
         template <typename K, typename V>
-        Element(uint32_t access_time, K&& key, V&& value) :
-            access_time(access_time),
-            key(std::forward<K>(key)),
-            value(std::forward<V>(value))
+        Element(uint32_t access_time, K &&key, V &&value) :
+            access_time(access_time), key(std::forward<K>(key)), value(std::forward<V>(value))
         {}
 
         uint32_t access_time = 0;
@@ -56,7 +56,7 @@ public:
     }
 
     template <typename K, typename V>
-    void insert(K&& key, V&& value)
+    void insert(K &&key, V &&value)
     {
         auto iter = _hash_map.find(key);
         if (iter != _hash_map.end()) {
@@ -76,7 +76,7 @@ public:
     }
 
 
-    const Value* lookup(const Key& key) const
+    const Value *lookup(const Key &key) const
     {
         auto iter = _hash_map.find(key);
         if (iter != _hash_map.end()) {
@@ -89,18 +89,18 @@ public:
         }
     }
 
-    Value* lookup(const Key& key) { return const_cast<Value*>(const_cast<const LruCache*>(this)->lookup(key)); }
+    Value *lookup(const Key &key) { return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup(key)); }
 
     // Does lookup. If it found a value, it calls the specified functor
     // with signature (const Key&, const Value*). If the functor returns true,
     // the element is erased from the cache directly and this function
     // returns nullptr. It's meant for cases where we have extra information
     // in the elements to decide if a cached value is stale.
-    // This can be done in separate steps through the API, but that requires
+    // It can of course be done in separate steps, but that'd require
     // multiple lookups whereas with this we hold the internal iterators already
     // in hand.
     template <typename Func>
-    const Value* lookup_unless(const Key& key, Func unless_func) const
+    const Value *lookup_unless(const Key &key, Func unless_func) const
     {
         auto iter = _hash_map.find(key);
         if (iter != _hash_map.end()) {
@@ -119,13 +119,13 @@ public:
     }
 
     template <typename Func>
-    Value* lookup_unless(const Key& key, Func unless_func)
+    Value *lookup_unless(const Key &key, Func unless_func)
     {
-        return const_cast<Value*>(const_cast<const LruCache*>(this)->lookup_unless<Func>(key, unless_func));
+        return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup_unless<Func>(key, unless_func));
     }
 
 
-    bool erase(const Key& key)
+    bool erase(const Key &key)
     {
         auto iter = _hash_map.find(key);
         if (iter == _hash_map.end()) { return false; }
@@ -189,6 +189,7 @@ public:
 };
 
 
+/*
 template <typename Value>
 using PrehashedLruCache = LruCache<size_t, Value, jaws::util::Prehashed, jaws::util::Prehashed>;
 
@@ -200,23 +201,24 @@ class NoKeysStoredLruCache : public LruCache<size_t, Value, jaws::util::Prehashe
     using BaseClass = LruCache<size_t, Value, jaws::util::Prehashed, jaws::util::Prehashed>;
 
 public:
-    const Value* lookup_keyed(const Key& key) const
+    const Value *lookup_keyed(const Key &key) const
     {
         size_t hash_value = absl::Hash<Key>{}(key);
         return BaseClass::lookup(hash_value);
     };
-    Value* lookup_keyed(const Key& key)
+    Value *lookup_keyed(const Key &key)
     {
-        return const_cast<Value*>(const_cast<const NoKeysStoredLruCache*>(this)->lookup_keyed(key));
+        return const_cast<Value *>(const_cast<const NoKeysStoredLruCache *>(this)->lookup_keyed(key));
     }
 
     template <typename K, typename V>
-    void insert_keyed(K&& key, V&& value)
+    void insert_keyed(K &&key, V &&value)
     {
         size_t hash_value = absl::Hash<Key>{}(std::forward(key));
         BaseClass::insert(hash_value, std::forward(value));
     }
 };
+*/
 
 
 }; // namespace jaws::util
