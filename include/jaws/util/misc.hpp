@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "jaws/core.hpp"
 #include "jaws/assume.hpp"
 #include "jaws/fatal.hpp"
@@ -37,7 +37,7 @@ inline std::string to_human_size(size_t size)
 };
 
 
-inline std::string to_lower(const std::string_view& str)
+inline std::string to_lower(const std::string_view &str)
 {
     std::string r(str);
     std::transform(str.begin(), str.end(), r.begin(), [](char c) { return std::tolower(c); });
@@ -46,7 +46,7 @@ inline std::string to_lower(const std::string_view& str)
 
 
 template <class T>
-constexpr const T& clamp(const T& v, const T& lo, const T& hi)
+constexpr const T &clamp(const T &v, const T &lo, const T &hi)
 {
     return v < lo ? lo : (v > hi ? hi : v);
 }
@@ -87,6 +87,16 @@ template <typename T>
 T make_default()
 {
     return T{};
+};
+
+
+struct MovableOnly
+{
+    MovableOnly() = default;
+    MovableOnly(MovableOnly &&) noexcept = default;
+    MovableOnly &operator=(MovableOnly &&) noexcept = default;
+    MovableOnly(const MovableOnly &) = delete;
+    MovableOnly &operator=(const MovableOnly &) = delete;
 };
 
 } // namespace jaws::util
