@@ -5,11 +5,12 @@ find_package(GTest CONFIG REQUIRED)
 
 # Convenience wrapper around add_test().
 function (add_gtest_executable _target)
+
     add_executable(${_target} ${ARGN})
     target_link_libraries(${_target}
     PRIVATE
         GTest::gtest GTest::gtest_main
-        jaws::jaws
+		jaws::jaws
     )
     set_target_properties(${_target} PROPERTIES FOLDER test)
 # TODO: this might not fully work yet --
