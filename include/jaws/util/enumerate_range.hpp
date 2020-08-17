@@ -11,17 +11,23 @@
 namespace jaws::util::detail {
 
 template <typename WrappedIteratorType>
-class WrappingIterator : public std::iterator<std::forward_iterator_tag, std::tuple<int, WrappedIteratorType>>
+class WrappingIterator
 {
     int _pos = 0;
     WrappedIteratorType _iter;
 
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::tuple<int, WrappedIteratorType>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     WrappingIterator() = default;
     WrappingIterator(int pos, WrappedIteratorType iter) : _pos(pos), _iter(std::forward<WrappedIteratorType>(iter)) {}
 
-    friend bool operator==(const WrappingIterator& lhs, const WrappingIterator& rhs) { return lhs._iter == rhs._iter; }
-    friend bool operator!=(const WrappingIterator& lhs, const WrappingIterator& rhs) { return !(lhs == rhs); }
+    friend bool operator==(const WrappingIterator &lhs, const WrappingIterator &rhs) { return lhs._iter == rhs._iter; }
+    friend bool operator!=(const WrappingIterator &lhs, const WrappingIterator &rhs) { return !(lhs == rhs); }
 
     auto operator*() { return std::tuple<int, decltype(*_iter)>(_pos, *_iter); }
     auto operator++()
@@ -55,17 +61,17 @@ public:
 namespace jaws::util {
 
 template <typename RangeType>
-auto enumerate_range(const RangeType& r, std::enable_if_t<std::is_lvalue_reference_v<RangeType>, int> = 0)
+auto enumerate_range(const RangeType &r, std::enable_if_t<std::is_lvalue_reference_v<RangeType>, int> = 0)
 {
-    return detail::EnumerateRangeProxy<const RangeType&>(r);
+    return detail::EnumerateRangeProxy<const RangeType &>(r);
 }
 template <typename RangeType>
-auto enumerate_range(RangeType& r)
+auto enumerate_range(RangeType &r)
 {
-    return detail::EnumerateRangeProxy<RangeType&>(r);
+    return detail::EnumerateRangeProxy<RangeType &>(r);
 }
 template <typename RangeType>
-auto enumerate_range(RangeType&& r, std::enable_if_t<std::is_rvalue_reference_v<RangeType&&>, int> = 0)
+auto enumerate_range(RangeType &&r, std::enable_if_t<std::is_rvalue_reference_v<RangeType &&>, int> = 0)
 {
     // Holding the original range as RangeType&& does not extend its lifetime to the end of the loop body,
     // but our rvalue-ref will live long enough, we just have to move the original range into it.
@@ -96,16 +102,14 @@ class WrappingIteratorTotal : public std::iterator<std::forward_iterator_tag, st
 public:
     WrappingIteratorTotal() = default;
     WrappingIteratorTotal(int pos, int total, WrappedIteratorType iter) :
-        _pos(pos),
-        _total(total),
-        _iter(std::forward<WrappedIteratorType>(iter))
+        _pos(pos), _total(total), _iter(std::forward<WrappedIteratorType>(iter))
     {}
 
-    friend bool operator==(const WrappingIteratorTotal& lhs, const WrappingIteratorTotal& rhs)
+    friend bool operator==(const WrappingIteratorTotal &lhs, const WrappingIteratorTotal &rhs)
     {
         return lhs._iter == rhs._iter;
     }
-    friend bool operator!=(const WrappingIteratorTotal& lhs, const WrappingIteratorTotal& rhs) { return !(lhs == rhs); }
+    friend bool operator!=(const WrappingIteratorTotal &lhs, const WrappingIteratorTotal &rhs) { return !(lhs == rhs); }
 
     auto operator*() { return std::tuple<int, int, decltype(*_iter)>(_pos, _total, *_iter); }
     auto operator++()
@@ -144,17 +148,17 @@ public:
 namespace jaws::util {
 
 template <typename RangeType>
-auto enumerate_range_total(const RangeType& r, std::enable_if_t<std::is_lvalue_reference_v<RangeType>, int> = 0)
+auto enumerate_range_total(const RangeType &r, std::enable_if_t<std::is_lvalue_reference_v<RangeType>, int> = 0)
 {
-    return detail::EnumerateRangeTotalProxy<const RangeType&>(r);
+    return detail::EnumerateRangeTotalProxy<const RangeType &>(r);
 }
 template <typename RangeType>
-auto enumerate_range_total(RangeType& r)
+auto enumerate_range_total(RangeType &r)
 {
-    return detail::EnumerateRangeTotalProxy<RangeType&>(r);
+    return detail::EnumerateRangeTotalProxy<RangeType &>(r);
 }
 template <typename RangeType>
-auto enumerate_range_total(RangeType&& r, std::enable_if_t<std::is_rvalue_reference_v<RangeType&&>, int> = 0)
+auto enumerate_range_total(RangeType &&r, std::enable_if_t<std::is_rvalue_reference_v<RangeType &&>, int> = 0)
 {
     // Holding the original range as RangeType&& does not extend its lifetime to the end of the loop body,
     // but our rvalue-ref will live long enough, we just have to move the original range into it.
