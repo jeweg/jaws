@@ -20,17 +20,18 @@
 #include <algorithm>
 #include <memory>
 
-jaws::Logger* logger = nullptr;
+jaws::Logger *logger = nullptr;
 
 //=========================================================================
 
-static void glfwErrorCallback(int error, const char* description)
+static void glfwErrorCallback(int error, const char *description)
 {
     logger->error("GLFW error {}: {}", error, description);
     JAWS_FATAL1("Error");
 }
 
-int main(int argc, char** argv)
+
+int main(int argc, char **argv)
 {
     return jaws::util::Main(argc, argv, [](auto, auto) {
         // Put a file-system-backed virtual file system starting in the project source dir subdir "shaders".
@@ -45,7 +46,7 @@ int main(int argc, char** argv)
         if (!glfwVulkanSupported()) { JAWS_FATAL1("glfwVulkanSupported -> false"); }
 
         uint32_t required_extension_count = 0;
-        const char** required_extensions = glfwGetRequiredInstanceExtensions(&required_extension_count);
+        const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extension_count);
 
         //----------------------------------------------------------------------
         // * Init instance w/ proper layers and instance extensions
@@ -62,7 +63,7 @@ int main(int argc, char** argv)
         // We will use GLFW3 only for getting the window and the vulkan surface.
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        GLFWwindow* glfw_window = glfwCreateWindow(800, 600, "jaws example", nullptr, nullptr);
+        GLFWwindow *glfw_window = glfwCreateWindow(800, 600, "jaws example", nullptr, nullptr);
         if (!glfw_window) {
             glfwTerminate();
             JAWS_FATAL1("Failed to create window");
@@ -91,16 +92,19 @@ int main(int argc, char** argv)
         window_context.create(&device, jaws::vulkan::WindowContext::CreateInfo{}.set_surface(surface));
 
         //----------------------------------------------------------------------
-        // Grab a shader
-
+        // Testing.. grab a shader
         {
-            jaws::vulkan::ShaderPtr shader =
+            jaws::vulkan::Shader shader =
                 device.get_shader(jaws::vulkan::ShaderCreateInfo{}.set_main_source_file("shader.vert"));
         }
 
         // window_context.create_swap_chain(800, 600);
         // Shader* my_shader = get_shader()
 
+        glfwSetKeyCallback(glfw_window, [](GLFWwindow *window, int key, int scancode, int action, int mods) {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {}
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        });
 
         while (!glfwWindowShouldClose(glfw_window)) {
             // render commands...
