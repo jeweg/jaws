@@ -17,8 +17,8 @@ AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
-BinPackArguments: false # This tends to make a mess of function calls.
-BinPackParameters: false # This tends to make a mess of function declaractions.
+BinPackArguments: false # Otherwise this tends to make a mess of function calls.
+BinPackParameters: false # Otherwise this tends to make a mess of function declaractions.
 BraceWrapping:
   AfterClass: true
   AfterControlStatement: false
@@ -26,6 +26,7 @@ BraceWrapping:
   AfterFunction: true
   AfterNamespace:  false
   AfterObjCDeclaration: false
+  AfterExternBlock: false
   AfterStruct: true
   AfterUnion: true
   BeforeCatch: false
@@ -52,7 +53,7 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
-FixNamespaceComments: true
+FixNamespaceComments: false # Otherwise this can leave namespace end comments in the wrong places which are not cleaned up.
 ForEachMacros:
   - foreach
   - Q_FOREACH
