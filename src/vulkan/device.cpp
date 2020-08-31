@@ -9,7 +9,7 @@
 
 namespace jaws::vulkan {
 
-Device::Device() = default;
+Device::Device() : _image_pool(1, 10), _buffer_pool(2, 10) {}
 
 Device::~Device()
 {
@@ -407,4 +407,23 @@ Shader Device::get_shader(const ShaderCreateInfo &ci)
 }
 
 
-} // namespace jaws::vulkan
+Image Device::create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage)
+{
+    uint64_t id = _image_pool.emplace(this, ci, usage);
+    auto *ptr = _image_pool.lookup(id);
+    JAWS_ASSUME(ptr);
+    ptr->id = id;
+    return Image(ptr);
+}
+
+
+Buffer Device::create_buffer(const VkBufferCreateInfo &ci, VmaMemoryUsage usage)
+{
+    uint64_t id = _buffer_pool.emplace(this, ci, usage);
+    auto *ptr = _buffer_pool.lookup(id);
+    JAWS_ASSUME(ptr);
+    ptr->id = id;
+    return Buffer(ptr);
+}
+
+}
