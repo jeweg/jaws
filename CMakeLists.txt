@@ -22,7 +22,7 @@ option(SEPARATE_HEADER_IMPL "Separate trees for header and impl files in an IDE?
 ####################################################
 
 # Note that this section sets CMAKE_TOOLCHAIN_FILE, so it must go before project().
-include(external/vcpkg-cmake/vcpkg_cmake.cmake)
+include(external/vcpkg-cmake/vcpkg-cmake.cmake)
 vcpkg_cmake_begin(
     VCPKG_DIR 3rd_party/vcpkg
     REPO_URL https://github.com/jweg/vcpkg
@@ -191,6 +191,7 @@ endif()
 
 set(src_util
     include/jaws/util/pool.hpp
+    include/jaws/util/pool.inl
     include/jaws/util/indenting_ostream.hpp
     src/util/indenting_ostream.cpp
     include/jaws/util/indentation.hpp
