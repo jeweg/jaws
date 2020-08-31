@@ -10,22 +10,30 @@
 #include "to_string.hpp"
 #include <vector>
 
-static VkBool32 VKAPI_PTR VulkanContextDebugCB(
-    VkDebugReportFlagsEXT flags,
-    VkDebugReportObjectTypeEXT objectType,
-    uint64_t object,
-    size_t location,
-    int32_t messageCode,
-    const char *pLayerPrefix,
-    const char *pMessage,
-    void *pUserData)
+
+static VkBool32 VKAPI_PTR vulkan_debug_utils_messenger_cb(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_types,
+    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+    void *user_data)
 {
-    // jaws::vulkan::Context* context = static_cast<jaws::vulkan::Context*>(pUserData);
-    // auto &logger = jaws::GetLogger(jaws::Category::Vulkan);
-    // logger.info("    [{}] obj {}, code {}, layer {}: \"{}\"", flags, objectType, messageCode, pLayerPrefix,
-    // pMessage);
+    spdlog::level::level_enum log_level = spdlog::level::info;
+    if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        log_level = spdlog::level::err;
+    } else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        log_level = spdlog::level::warn;
+    } else if (message_severity & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+        log_level = spdlog::level::info;
+    } else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        log_level = spdlog::level::debug;
+    }
+    if (callback_data) {
+        auto &logger = jaws::get_logger(jaws::Category::VulkanValidation);
+        logger.log(log_level, callback_data->pMessage);
+    }
     return VK_FALSE;
 }
+
 
 namespace jaws::vulkan {
 
@@ -71,7 +79,7 @@ void Context::create(const Context::CreateInfo &ci)
         auto required_layers = ci.required_layers;
 
         // Add defaults
-        if (ci.debugging) { optional_layers.add(Extension("VK_LAYER_LUNARG_standard_validation")); }
+        if (ci.debugging) { optional_layers.add("VK_LAYER_KHRONOS_validation"); }
 
         ExtensionList avail_layers;
         for (const auto &layer : enumerated<VkLayerProperties>(vkEnumerateInstanceLayerProperties, {})) {
@@ -83,38 +91,34 @@ void Context::create(const Context::CreateInfo &ci)
         logger.info("optional_layers: {}", optional_layers.to_string(true));
 
         std::string err;
-        wanted_layers = ExtensionList::resolve(avail_layers, required_layers, optional_layers, &err);
+        _instance_extensions = ExtensionList::resolve(avail_layers, required_layers, optional_layers, &err);
         if (!err.empty()) { JAWS_FATAL1(err); }
 
-        logger.info("selecting layers: {}", wanted_layers.to_string(true));
+        logger.info("selecting layers: {}", _instance_extensions.to_string(true));
     }
 
     //=========================================================================
     // Handle extensions
 
-    ExtensionList wanted_extensions;
     {
         auto optional_extensions = ci.optional_instance_extensions;
         auto required_extensions = ci.required_instance_extensions;
 
         // Add defaults
         if (!ci.headless) {
-            required_extensions.add(Extension("VK_KHR_surface"));
+            required_extensions.add("VK_KHR_surface");
 #if defined(JAWS_OS_WIN)
-            required_extensions.add(Extension("VK_KHR_win32_surface"));
+            required_extensions.add("VK_KHR_win32_surface");
 #elif defined(JAWS_OS_LINUX)
             // How do we choose between xcb and xlib? Does glfw require one?
-            required_extensions.add(Extension("VK_KHR_xcb_surface"));
+            required_extensions.add("VK_KHR_xcb_surface");
             // extensions_ptrs.push_back("VK_KHR_xlib_surface");
 #else
 #    error Unsupported platform!
 #endif
         }
-        if (ci.debugging) {
-            optional_extensions.add(Extension("VK_EXT_debug_utils"));
-            optional_extensions.add(Extension("VK_EXT_debug_report"));
-        }
-        required_extensions.add(Extension("VK_KHR_get_surface_capabilities2"));
+        if (ci.debugging) { optional_extensions.add("VK_EXT_debug_utils"); }
+        required_extensions.add("VK_KHR_get_surface_capabilities2");
 
         ExtensionList avail_extensions;
         for (const auto &e : enumerated<VkExtensionProperties>(vkEnumerateInstanceExtensionProperties, {}, nullptr)) {
@@ -126,9 +130,9 @@ void Context::create(const Context::CreateInfo &ci)
         logger.info("optional_extensions: {}", optional_extensions.to_string(true));
 
         std::string err;
-        wanted_extensions = ExtensionList::resolve(avail_extensions, required_extensions, optional_extensions, &err);
+        _instance_extensions = ExtensionList::resolve(avail_extensions, required_extensions, optional_extensions, &err);
         if (!err.empty()) { JAWS_FATAL1(err); }
-        logger.info("selecting extensions: {}", wanted_extensions.to_string(true));
+        logger.info("selecting extensions: {}", _instance_extensions.to_string(true));
     }
 
     //=========================================================================
@@ -141,8 +145,8 @@ void Context::create(const Context::CreateInfo &ci)
         app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         app_info.apiVersion = volkGetInstanceVersion();
 
-        auto wanted_extensions_ptrs = wanted_extensions.as_char_ptrs();
-        auto wanted_layers_ptrs = wanted_layers.as_char_ptrs();
+        auto wanted_extensions_ptrs = _instance_extensions.as_char_ptrs();
+        auto wanted_layers_ptrs = _instance_layers.as_char_ptrs();
 
         VkInstanceCreateInfo instance_ci = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
         instance_ci.pApplicationInfo = &app_info;
@@ -159,14 +163,11 @@ void Context::create(const Context::CreateInfo &ci)
 
         //-------------------------------------------------------------------------
         // Debug reporting
-
-        VkDebugReportCallbackCreateInfoEXT debug_report_ci = {VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT};
-        debug_report_ci.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT
-                                | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT
-                                | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-        debug_report_ci.pfnCallback = &VulkanContextDebugCB;
-        debug_report_ci.pUserData = this;
-        result = vkCreateDebugReportCallbackEXT(_vk_instance, &debug_report_ci, nullptr, &_debug_report_callback);
+        VkDebugUtilsMessengerCreateInfoEXT debug_messenger_ci = {
+            VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+        debug_messenger_ci.pfnUserCallback = &vulkan_debug_utils_messenger_cb;
+        result = vkCreateDebugUtilsMessengerEXT(_vk_instance, &debug_messenger_ci, nullptr, &_debug_messenger);
+        JAWS_VK_HANDLE_FATAL(result);
 
         //=========================================================================
         // Enumerate physical devices
@@ -206,8 +207,8 @@ void Context::create(const Context::CreateInfo &ci)
     }
 
     const ExtensionList dedicated_alloc_extensions = {
-        Extension("VK_KHR_get_memory_requirements2"),
-        Extension("VK_KHR_dedicated_allocation")
+        "VK_KHR_get_memory_requirements2",
+        "VK_KHR_dedicated_allocation"
     };
     ExtensionList optional_device_extensions;
     optional_device_extensions.insert(optional_device_extensions.end(),
@@ -493,7 +494,7 @@ void Context::create(const Context::CreateInfo &ci)
 
 void Context::destroy()
 {
-    vkDestroyDebugReportCallbackEXT(_vk_instance, _debug_report_callback, nullptr);
+    vkDestroyDebugUtilsMessengerEXT(_vk_instance, _debug_messenger, nullptr);
     vkDestroyInstance(_vk_instance, nullptr);
 }
 
@@ -506,4 +507,4 @@ Shader* Context::get_shader(const std::string& main_source_file) const
 }
  */
 
-} // namespace jaws::vulkan
+}
