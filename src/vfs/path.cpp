@@ -24,7 +24,7 @@ Path &Path::operator=(const Path &p)
 }
 
 
-Path &Path::operator=(const Path &&p) noexcept
+Path &Path::operator=(Path &&p) noexcept
 {
     _str = std::move(p._str);
     _hash = p._hash;
@@ -167,4 +167,4 @@ bool Path::is_parsed() const noexcept
 }
 
 
-} // namespace jaws::vfs
+}
