@@ -3,11 +3,14 @@
 #include "jaws/vfs/path.hpp"
 #include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/vulkan.hpp"
+#include "jaws/vulkan/buffer.hpp"
+#include "jaws/vulkan/image.hpp"
 #include "jaws/vulkan/extension.hpp"
 #include "jaws/util/misc.hpp"
 #include "jaws/util/hashing.hpp"
+#include "jaws/util/ref_ptr.hpp"
 #include "jaws/util/lru_cache.hpp"
-//#include "jaws/vulkan/sediment.hpp"
+#include "jaws/util/pool.hpp"
 
 namespace jaws::vulkan {
 
@@ -71,12 +74,28 @@ public:
 
     const VolkDeviceTable &vk() const;
 
-
-    // const ExtensionList& get_extensions() const;
+    const ExtensionList &get_extensions() const;
     // Sediment* get_sediment() { return _sediment.get(); }
 
     // TODO: later on decide how to handle capability flags less ad-hoc.
     bool supports_validation_cache() const;
+
+    //----------------------------------------------------------------
+    // Low-level resource creation. Uses vulkan-memory-allocator.
+    // For now expose all of VmaMemoryUsage. Later on I'd like to consolidate this
+    // a little, abstract the best way to transfer to GPU for a particular device, etc.
+
+    Image create_image(const VkImageCreateInfo &, VmaMemoryUsage usage);
+    Buffer create_buffer(const VkBufferCreateInfo &, VmaMemoryUsage usage);
+
+    //----------------------------------------------------------------
+
+private:
+    friend class BufferResource;
+    friend class ImageResource;
+
+    VmaAllocator get_vma_allocator() const { return _vma_allocator; }
+
 
 private:
     friend Context;
@@ -106,6 +125,10 @@ private:
 
     // std::unique_ptr<Sediment> _sediment;
     std::unique_ptr<ShaderSystem> _shader_system;
+
+
+    jaws::util::Pool<ImageResource> _image_pool;
+    jaws::util::Pool<BufferResource> _buffer_pool;
 };
 
 
@@ -148,12 +171,10 @@ inline const VolkDeviceTable &Device::vk() const
 };
 
 
-/*
-inline const ExtensionList& Device::get_extensions() const
+inline const ExtensionList &Device::get_extensions() const
 {
     return _extensions;
 }
-*/
 
 
 inline bool Device::supports_validation_cache() const
@@ -161,4 +182,4 @@ inline bool Device::supports_validation_cache() const
     return _has_cap_validation_cache;
 }
 
-} // namespace jaws::vulkan
+}
