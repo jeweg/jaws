@@ -2,6 +2,7 @@
 #include "jaws/jaws.hpp"
 #include "jaws/vulkan/window_context.hpp"
 #include "jaws/vulkan/device.hpp"
+#include "jaws/vulkan/context.hpp"
 #include "jaws/vulkan/utils.hpp"
 #include "jaws/util/misc.hpp"
 #include "to_string.hpp"
@@ -32,8 +33,15 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
     // We use a system that assigns a weight to each format it finds and then
     // chooses the one with the highest weight.
 
+    // Not sure how common this extension is. Could add fallback.
+    JAWS_ASSUME(_device->get_context()->get_instance_extensions().contains("VK_KHR_get_surface_capabilities2"));
+
     VkPhysicalDeviceSurfaceInfo2KHR surface_info = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR};
     surface_info.surface = _surface;
+
+    // SFI: support
+    // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSurfaceFullScreenExclusiveWin32InfoEXT.html
+    // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSurfaceFullScreenExclusiveInfoEXT.html
 
     auto surface_formats = enumerated<VkSurfaceFormat2KHR>(
         vkGetPhysicalDeviceSurfaceFormats2KHR,
@@ -42,10 +50,12 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
         &surface_info);
     JAWS_ASSUME(!surface_formats.empty());
 
+    /*
     logger.info("surface formats:");
     for (auto f : surface_formats) {
         logger.info("    format: {}, {}", to_string(f.surfaceFormat.format), to_string(f.surfaceFormat.colorSpace));
     }
+    */
     _surface_format = choose_best(surface_formats, [](auto sf) {
         if (sf.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
             && sf.surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB) {
@@ -60,10 +70,19 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
         return 0;
     });
 
+    /*
     logger.info(
         "selected surface format: {}, {}",
         to_string(_surface_format.surfaceFormat.format),
         to_string(_surface_format.surfaceFormat.colorSpace));
+        */
+
+    const auto physical_device = _device->get_physical_device();
+
+    _surface_capabilities = {};
+    VkResult result =
+        vkGetPhysicalDeviceSurfaceCapabilities2KHR(physical_device, &surface_info, &_surface_capabilities);
+    JAWS_VK_HANDLE_FATAL(result);
 }
 
 void WindowContext::destroy()
@@ -79,23 +98,30 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
 {
     auto &logger = get_logger(Category::Vulkan);
 
+    JAWS_ASSUME(_device->get_extensions().contains(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+    JAWS_ASSUME(_device->get_context()->get_instance_extensions().contains("VK_KHR_surface"));
+
     const auto physical_device = _device->get_physical_device();
     VkResult result = {};
+
+    const auto &surfaceCapabilities = _surface_capabilities.surfaceCapabilities;
+
 
     //-------------------------------------------------------------------------
     // Extent
 
     VkExtent2D extent;
-    if (_surface_caps.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
+    if (surfaceCapabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
         // See
         // https://github.com/KhronosGroup/Vulkan-Hpp/blob/eaf09ee61e6cb964cf72e0023cd30777f8e3f9fe/samples/05_InitSwapchain/05_InitSwapchain.cpp#L95
         // If the surface size is undefined, the size is set to the size of the images requested.
-        extent.width = jaws::util::clamp(width, _surface_caps.minImageExtent.width, _surface_caps.maxImageExtent.width);
-        extent.height =
-            jaws::util::clamp(height, _surface_caps.minImageExtent.height, _surface_caps.maxImageExtent.height);
+        extent.width = jaws::util::clamp(
+            width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+        extent.height = jaws::util::clamp(
+            height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
     } else {
         // If the surface size is defined, the swap chain size must match
-        extent = _surface_caps.currentExtent;
+        extent = surfaceCapabilities.currentExtent;
     }
 
     //-------------------------------------------------------------------------
@@ -163,20 +189,20 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
 
     // Use identity if available, otherwise current.
     VkSurfaceTransformFlagBitsKHR pre_transform =
-        (_surface_caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ?
+        (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ?
             VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR :
-            _surface_caps.currentTransform;
+            surfaceCapabilities.currentTransform;
 
     //-------------------------------------------------------------------------
     // Image count
 
     // start w/ minimum count required to function
-    uint32_t swapchain_image_count = _surface_caps.minImageCount;
+    uint32_t swapchain_image_count = surfaceCapabilities.minImageCount;
     // "it is recommended to request at least one more image than the minimum"
     swapchain_image_count += 1;
-    if (_surface_caps.maxImageCount > 0) {
+    if (surfaceCapabilities.maxImageCount > 0) {
         // Cap the value
-        swapchain_image_count = std::min(_surface_caps.maxImageCount, swapchain_image_count);
+        swapchain_image_count = std::min(surfaceCapabilities.maxImageCount, swapchain_image_count);
     }
 
     //-------------------------------------------------------------------------
@@ -213,6 +239,94 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     result = vkCreateSwapchainKHR(_device->get_device(), &swapchain_ci, nullptr, &_swapchain);
     JAWS_VK_HANDLE_FATAL(result);
     logger.info("swapchain: {}", (void *)_swapchain);
+
+    //-------------------------------------------------------------------------
+    // The swap chain images must be recreated whenever the swap chain changes.
+    // Other resources might depend on it (render passes might depend on the swapchain format,
+    // pipelines might depend on viewport and scissor size (although they could be dynamic state),
+    // but that's not a given. hashing could probably be used to solve this.
+
+    std::vector<VkImage> swapchain_images =
+        enumerated<VkImage>(vkGetSwapchainImagesKHR, nullptr, _device->get_device(), _swapchain);
+    logger.info("retrieved {} swapchain images", swapchain_images.size());
+
+    //-------------------------------------------------------------------------
+    // Create image views for the swap chain images so that we can eventually render into them.
+
+    std::vector<VkImageView> swapchain_image_views(swapchain_images.size());
+    for (size_t i = 0; i < swapchain_images.size(); ++i) {
+        VkImageSubresourceRange subresource_range = {};
+        subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource_range.baseMipLevel = 0;
+        subresource_range.levelCount = 1;
+        subresource_range.baseArrayLayer = 0;
+        subresource_range.layerCount = 1;
+
+        VkImageViewCreateInfo ci = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        ci.image = swapchain_images[i];
+        ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ci.subresourceRange = subresource_range;
+        ci.format = _surface_format.surfaceFormat.format;
+
+        result = vkCreateImageView(_device->get_device(), &ci, nullptr, &swapchain_image_views[i]);
+        JAWS_VK_HANDLE_FATAL(result);
+    }
+
+    //-------------------------------------------------------------------------
+    // Create depth buffer
+
+    constexpr VkFormat DEPTH_FORMAT = VK_FORMAT_D24_UNORM_S8_UINT;
+
+    {
+        VkFormatProperties2 props2;
+        vkGetPhysicalDeviceFormatProperties2(_device->get_physical_device(), DEPTH_FORMAT, &props2);
+        const VkFormatProperties &props = props2.formatProperties;
+
+        // TODO: See discussion here:
+        // https://www.reddit.com/r/vulkan/comments/71k4gy/why_is_vk_image_tiling_linear_so_limited/
+        // OTOH,
+        // https://github.com/KhronosGroup/Vulkan-Hpp/blob/master/samples/06_InitDepthBuffer/06_InitDepthBuffer.cpp
+        // prefers linear tiling. Not sure.
+        VkImageTiling tiling;
+        if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            tiling = VK_IMAGE_TILING_OPTIMAL;
+        } else if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            tiling = VK_IMAGE_TILING_LINEAR;
+        } else {
+            JAWS_FATAL1("DepthStencilAttachment is not supported for depth format");
+        }
+
+
+        VkImageCreateInfo ci = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+        ci.imageType = VK_IMAGE_TYPE_2D;
+        ci.format = DEPTH_FORMAT;
+        ci.extent.width = extent.width;
+        ci.extent.height = extent.height;
+        std::memcpy(&ci.extent, &extent, sizeof(extent));
+        ci.mipLevels = 1;
+        ci.arrayLayers = 1;
+        ci.samples = VK_SAMPLE_COUNT_1_BIT;
+        ci.tiling = tiling;
+        ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        _depth_image = _device->create_image(ci, VMA_MEMORY_USAGE_GPU_ONLY);
+
+#if 0
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.size = 65536;
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    VkBuffer buffer;
+    VmaAllocation allocation;
+    result = vmaCreateBuffer(_vma_allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
+    JAWS_VK_HANDLE_FATAL(result);
+
+    vmaDestroyBuffer(_vma_allocator, buffer, allocation);
+#endif
+    }
 };
 
-} // namespace jaws::vulkan
+}
