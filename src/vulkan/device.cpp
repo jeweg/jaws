@@ -6,6 +6,7 @@
 
 #include "jaws/vulkan/vulkan.hpp"
 
+
 namespace jaws::vulkan {
 
 Device::Device() = default;
@@ -282,6 +283,13 @@ void Device::create(Context *context, const CreateInfo &ci)
         device_ci.pQueueCreateInfos = queue_cis.data();
         device_ci.enabledExtensionCount = static_cast<uint32_t>(wanted_extensions_ptrs.size());
         device_ci.ppEnabledExtensionNames = wanted_extensions_ptrs.data();
+
+        // Setting layers on the device level is deprecated, yet vulkan-tutorial.com
+        // recommends still setting it for backwards compatibility.
+        // We'll follow this here and set them to the instance layers.
+        auto layers_ptrs = context->get_instance_layers().as_char_ptrs();
+        device_ci.enabledLayerCount = static_cast<uint32_t>(layers_ptrs.size());
+        device_ci.ppEnabledLayerNames = layers_ptrs.data();
 
         // https://github.com/KhronosGroup/Vulkan-Docs/blob/master/appendices/VK_KHR_device_group_creation.txt#L81
         // If the first device group has more than one physical device. create

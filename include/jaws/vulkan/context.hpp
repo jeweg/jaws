@@ -115,11 +115,17 @@ public:
 
     bool is_headless() const { return _headless; }
 
+    const ExtensionList &get_instance_extensions() const { return _instance_extensions; }
+
+    const ExtensionList &get_instance_layers() const { return _instance_layers; }
+
 private:
     VkInstance _vk_instance = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> _physical_devices;
     PresentationSupportCallback _presentation_support_callback;
-    VkDebugReportCallbackEXT _debug_report_callback = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT _debug_messenger = VK_NULL_HANDLE;
+    ExtensionList _instance_extensions;
+    ExtensionList _instance_layers;
 
     bool _headless = false;
 };
@@ -134,4 +140,4 @@ inline Context::PresentationSupportCallback Context::get_presentation_support_ca
     return _presentation_support_callback;
 }
 
-} // namespace jaws::vulkan
+}
