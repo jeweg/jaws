@@ -70,6 +70,9 @@ protected:
     RefCounted(RefCounted &&other) : _ref_count(other._ref_count.load(std::memory_order_acquire)) {}
     RefCounted &operator=(RefCounted &&other) = delete;
 
+    RefCounted(const RefCounted &) = delete;
+    RefCounted &operator=(const RefCounted &) = delete;
+
     [[nodiscard]] size_t get_ref_count() const noexcept;
 
 protected:
@@ -111,7 +114,7 @@ public:
     RefCountedHandle &operator=(std::nullptr_t) { _resource_ptr = nullptr; }
     operator bool() const noexcept { return !!_resource_ptr; }
 
-private:
+protected:
     RefCountedHandle(ResourceType *r) noexcept : _resource_ptr(r) {}
     ref_ptr<ResourceType> _resource_ptr;
 };
