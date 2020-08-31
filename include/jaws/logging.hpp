@@ -22,7 +22,8 @@ public:
             LoggerData("General"),
             LoggerData("UncaughtException"),
             LoggerData("OpenGL"),
-            LoggerData("Vulkan")}
+            LoggerData("Vulkan"),
+            LoggerData("VulkanValidation")}
     {}
 
     Logger &get_logger(Category cat)
@@ -65,7 +66,7 @@ private:
             return *spd_logger;
         }
     };
-    std::array<LoggerData, 5> _logger_data;
+    std::array<LoggerData, 6> _logger_data;
 };
 
 
