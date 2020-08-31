@@ -55,6 +55,8 @@ vcpkg_cmake_end()
 
 project(jaws VERSION 0.1 LANGUAGES C CXX)
 
+set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
+
 # Is this built standd-alone or via add_subdirectory?
 # Set JAWS_MASTER_PROJECT to ON if building jaws by itself!
 if (NOT DEFINED JAWS_MASTER_PROJECT)
@@ -158,6 +160,8 @@ set(src_vulkan
     include/jaws/vulkan/shader_system.hpp
     include/jaws/vulkan/shader.hpp
     include/jaws/vulkan/extension.hpp
+    include/jaws/vulkan/buffer.hpp
+    include/jaws/vulkan/image.hpp
     #include/jaws/vulkan/sediment.hpp
     src/vulkan/context.cpp
     src/vulkan/window_context.cpp
@@ -166,9 +170,10 @@ set(src_vulkan
     src/vulkan/vulkan.cpp
     src/vulkan/to_string.cpp
     src/vulkan/to_string.hpp
-    src/vulkan/to_string.inl
     src/vulkan/shader_system.cpp
     src/vulkan/extension.cpp
+    src/vulkan/buffer.cpp
+    src/vulkan/image.cpp
     #src/vulkan/sediment.cpp
 )
 
@@ -185,6 +190,7 @@ elseif (UNIX)
 endif()
 
 set(src_util
+    include/jaws/util/pool.hpp
     include/jaws/util/indenting_ostream.hpp
     src/util/indenting_ostream.cpp
     include/jaws/util/indentation.hpp
@@ -195,13 +201,11 @@ set(src_util
     include/jaws/util/instance_counter.hpp
     include/jaws/util/file_observer.hpp
     include/jaws/util/type_traits.hpp
-    include/jaws/util/file_observing.hpp
     include/jaws/util/hashing.hpp
     include/jaws/util/ref_ptr.hpp
     include/jaws/util/ref_ptr.inl
     src/util/file_observer.cpp
     src/util/file_observer_impl.hpp
-    src/util/file_observing.cpp
     include/jaws/util/string_lines_builder.hpp
     include/jaws/util/enumerate_range.hpp
     include/jaws/util/lru_cache.hpp
@@ -211,10 +215,12 @@ set(src_vfs
     include/jaws/vfs/vfs.hpp
     include/jaws/vfs/vfs_backend.hpp
     include/jaws/vfs/path.hpp
-    include/jaws/vfs/file_system_vfs.hpp
-    src/vfs/file_system_vfs.cpp
+    include/jaws/vfs/file_system_backend.hpp
+    include/jaws/vfs/in_memory_backend.hpp
     src/vfs/vfs.cpp
     src/vfs/path.cpp
+    src/vfs/file_system_backend.cpp
+    src/vfs/in_memory_backend.cpp
 )
 
 set(all_source
