@@ -1,6 +1,7 @@
 #pragma once
 #include "jaws/core.hpp"
 #include "jaws/vulkan/vulkan.hpp"
+#include "jaws/vulkan/image.hpp"
 #include "jaws/util/misc.hpp"
 
 namespace jaws::vulkan {
@@ -46,6 +47,7 @@ public:
     void destroy();
 
 private:
+public: // remove later on
     void create_swap_chain(uint32_t width, uint32_t height);
 
 private:
@@ -53,9 +55,11 @@ private:
     VkSurfaceKHR _surface;
     bool _enable_vsync;
     bool _allow_frame_drops;
-    VkSurfaceCapabilitiesKHR _surface_caps;
+    VkSurfaceCapabilities2KHR _surface_capabilities;
     VkSurfaceFormat2KHR _surface_format;
     VkSwapchainKHR _swapchain;
+
+    Image _depth_image;
 
     // The idea is to generate a hash of the params and save that here.
     // check it to test whether to recreate the swap chain.
