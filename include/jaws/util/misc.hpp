@@ -99,4 +99,28 @@ struct MovableOnly
     MovableOnly &operator=(const MovableOnly &) = delete;
 };
 
-} // namespace jaws::util
+
+// Note: this might be useful for assignments as well. But then we'd have to use
+// a different type trait...
+template <class T>
+inline const T &forward_to_move_or_copy(typename std::remove_reference<T>::type &t) noexcept
+{
+    return static_cast<const T &>(t);
+}
+
+template <class T>
+inline T &&forward_to_move_or_copy(
+    typename std::remove_reference<T>::type &&t, std::enable_if_t<std::is_move_constructible_v<T>> * = nullptr) noexcept
+{
+    return static_cast<T &&>(t);
+}
+
+template <class T>
+inline const T &forward_to_move_or_copy(
+    typename std::remove_reference<T>::type &&t,
+    std::enable_if_t<!std::is_move_constructible_v<T>> * = nullptr) noexcept
+{
+    return static_cast<const T &>(t);
+}
+
+}
