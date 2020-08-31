@@ -1,4 +1,4 @@
-#include "jaws/vfs/file_system_vfs.hpp"
+#include "jaws/vfs/file_system_backend.hpp"
 #include "absl/hash/hash.h"
 #include "xxhash.h"
 
@@ -21,12 +21,12 @@ struct FileHandle
     }
 };
 
-} // namespace detail
+}
 
-FileSystemVfs::FileSystemVfs(const std::filesystem::path &root) : _root(root) {}
+FileSystemBackend::FileSystemBackend(const std::filesystem::path &root) : _root(root) {}
 
 
-fs::path FileSystemVfs::to_actual_path(const Path &path) const
+fs::path FileSystemBackend::to_actual_path(const Path &path) const
 {
     fs::path fs_path = _root / fs::path(path.get_path());
     while (fs::is_symlink(fs_path)) { fs_path = fs::read_symlink(fs_path); }
@@ -34,7 +34,7 @@ fs::path FileSystemVfs::to_actual_path(const Path &path) const
 }
 
 
-bool FileSystemVfs::is_file(const Path &path) const
+bool FileSystemBackend::is_file(const Path &path) const
 {
     std::error_code ec;
     bool r = fs::is_regular_file(to_actual_path(path), ec);
@@ -43,7 +43,7 @@ bool FileSystemVfs::is_file(const Path &path) const
 }
 
 
-bool FileSystemVfs::is_dir(const Path &path) const
+bool FileSystemBackend::is_dir(const Path &path) const
 {
     std::error_code ec;
     bool r = fs::is_directory(to_actual_path(path));
@@ -52,7 +52,7 @@ bool FileSystemVfs::is_dir(const Path &path) const
 }
 
 
-size_t FileSystemVfs::get_file_size(const Path &path) const
+size_t FileSystemBackend::get_file_size(const Path &path) const
 {
     std::error_code ec;
     size_t r = fs::file_size(to_actual_path(path));
@@ -61,7 +61,7 @@ size_t FileSystemVfs::get_file_size(const Path &path) const
 }
 
 
-size_t FileSystemVfs::read_full(const Path &path, uint8_t *write_ptr, size_t *out_fingerprint) const
+size_t FileSystemBackend::read_full(const Path &path, uint8_t *write_ptr, uint64_t *out_fingerprint) const
 {
     fs::path p = to_actual_path(path);
     detail::FileHandle fh(p);
@@ -75,7 +75,7 @@ size_t FileSystemVfs::read_full(const Path &path, uint8_t *write_ptr, size_t *ou
 }
 
 
-size_t FileSystemVfs::read_bytes(const Path &path, uint8_t *write_ptr, size_t offset, size_t num_bytes) const
+size_t FileSystemBackend::read_bytes(const Path &path, uint8_t *write_ptr, size_t offset, size_t num_bytes) const
 {
     fs::path p = to_actual_path(path);
     detail::FileHandle fh(p);
@@ -93,7 +93,7 @@ size_t FileSystemVfs::read_bytes(const Path &path, uint8_t *write_ptr, size_t of
 // TODO: clean up the other read functions, use the RAII class, think about useful overloads
 
 
-bool FileSystemVfs::get_file_contents(
+bool FileSystemBackend::get_file_contents(
     const Path &path, std::vector<uint8_t> *out_contents, size_t offset_bytes, size_t num_bytes) const
 {
     fs::path p = to_actual_path(path);
@@ -101,7 +101,7 @@ bool FileSystemVfs::get_file_contents(
 }
 
 
-bool FileSystemVfs::get_file_contents(
+bool FileSystemBackend::get_file_contents(
     const std::filesystem::path &p, std::vector<uint8_t> *out_contents, size_t offset_bytes, size_t num_bytes) const
 {
     FILE *handle = fopen(p.string().c_str(), "r");
@@ -119,7 +119,7 @@ bool FileSystemVfs::get_file_contents(
     return true;
 }
 
-size_t FileSystemVfs::get_file_fingerprint(const Path &path, bool force_exact) const
+uint64_t FileSystemBackend::get_file_fingerprint(const Path &path, bool force_exact) const
 {
     constexpr size_t MAX_BYTES_TO_HASH = 1024 * 1024 * 1; // 1 MiB
 
@@ -134,7 +134,7 @@ size_t FileSystemVfs::get_file_fingerprint(const Path &path, bool force_exact) c
     bool ok = get_file_contents(p, &contents, 0, to_hash);
     if (!ok) return 0;
 
-    size_t hash_value = XXH64(contents.data(), to_hash, 0);
+    uint64_t hash_value = XXH64(contents.data(), to_hash, 0);
 
     // If not all content went into the hash, we also combine the last write time and file size into the hash.
     if (to_hash < file_size) {
@@ -144,4 +144,4 @@ size_t FileSystemVfs::get_file_fingerprint(const Path &path, bool force_exact) c
     return hash_value;
 }
 
-} // namespace jaws::vfs
+}
