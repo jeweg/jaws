@@ -114,4 +114,4 @@ inline Indenting::~Indenting()
     _stream.ChangeLevelBy(-_level_delta);
 }
 
-} // namespace jaws::util
+}

@@ -80,4 +80,4 @@ std::vector<ElemType> enumerated_void(FuncPtrType func_ptr, ElemType elem_protot
     return result_list;
 }
 
-} // namespace jaws::vulkan
+}

@@ -21,4 +21,4 @@ extern JAWS_API const std::vector<std::string> &get_cmd_line_args();
 extern JAWS_API void set_fatal_handler(FatalHandler);
 extern JAWS_API FatalHandler get_fatal_handler();
 
-} // namespace jaws
+}

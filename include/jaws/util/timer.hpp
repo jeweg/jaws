@@ -27,4 +27,4 @@ constexpr double GetDeltaTime_s(uint64_t t0, uint64_t t1)
     return cabs(static_cast<int64_t>(t1) - static_cast<int64_t>(t0)) / 1000000.0;
 }
 
-} // namespace jaws::util
+}

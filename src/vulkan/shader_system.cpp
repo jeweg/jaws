@@ -120,7 +120,6 @@ public:
         try_path = _vfs.make_canonical(try_path);
 
         bool is_file = _vfs.lookup_backend(try_path)->is_file(try_path);
-        bool is_dir = _vfs.lookup_backend(try_path)->is_dir(try_path);
 
         size_t fingerprint = 0;
         std::string content = _vfs.read_text_file(try_path, &fingerprint);
@@ -319,7 +318,7 @@ public:
 };
 #endif
 
-} // namespace detail
+}
 
 
 void ShaderResource::on_all_references_dropped()
@@ -465,4 +464,4 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
 }
 
 
-} // namespace jaws::vulkan
+}

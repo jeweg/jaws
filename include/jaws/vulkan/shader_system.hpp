@@ -60,7 +60,7 @@ public:
     Shader get_shader(const ShaderCreateInfo &);
 
 private:
-    friend class ShaderResource;
+    friend struct ShaderResource;
     void shader_got_unreferenced(ShaderResource *)
     {
         // schedule for actual deletion of vulkan resources. not within a frame, though!
@@ -79,4 +79,4 @@ private:
     util::LruCache<ShaderCreateInfo, CachedShaderInformation> _shader_cache;
 };
 
-} // namespace jaws::vulkan
+}

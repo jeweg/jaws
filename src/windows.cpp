@@ -38,6 +38,6 @@ std::string ErrorCodeToString(DWORD err)
     return std::string(buffer);
 }
 
-} // namespace jaws
+}
 
 #endif

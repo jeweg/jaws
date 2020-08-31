@@ -17,4 +17,4 @@ inline bool Failed(ResultCode result)
     return result != ResultCode::Success;
 }
 
-} // namespace jaws
+}

@@ -7,6 +7,7 @@
 
 // This is the naive implementation. Here are pointers to potentially more efficient ways:
 // https://stackoverflow.com/questions/931093/how-do-i-make-my-program-watch-for-file-modification-in-c
+// https://stackoverflow.com/questions/54024915/how-to-monitor-file-changes-via-win-api
 
 namespace fs = std::filesystem;
 
@@ -16,7 +17,7 @@ struct hash<fs::path>
 {
     size_t operator()(std::filesystem::path const &s) const noexcept { return std::hash<std::string>{}(s.string()); }
 };
-} // namespace std
+}
 
 namespace jaws::util::detail {
 
@@ -97,4 +98,4 @@ public:
     }
 };
 
-} // namespace jaws::util::detail
+}

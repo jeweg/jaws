@@ -142,4 +142,4 @@ ExtensionList ExtensionList::resolve(
     return r;
 }
 
-} // namespace jaws::vulkan
+}

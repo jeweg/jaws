@@ -24,4 +24,4 @@ int Main(int argc, char **argv, UserMain user_main)
     }
 }
 
-} // namespace jaws::util
+}

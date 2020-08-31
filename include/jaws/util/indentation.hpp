@@ -111,4 +111,4 @@ public:
 };
 
 
-} // namespace jaws::util
+}

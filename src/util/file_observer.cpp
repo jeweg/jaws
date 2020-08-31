@@ -30,4 +30,4 @@ std::vector<FileObserver::Result> FileObserver::Poll()
 }
 
 
-} // namespace jaws::util
+}

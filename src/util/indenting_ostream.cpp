@@ -51,5 +51,5 @@ IndentingOStream& IndentingOStream::ChangeLevelTo(int level)
     return *this;
 }
 
-}} // namespace jaws::util
+}}
 #endif

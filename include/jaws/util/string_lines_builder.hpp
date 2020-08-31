@@ -76,4 +76,4 @@ private:
     std::string _indent_fill_step;
 };
 
-} // namespace jaws::util
+}

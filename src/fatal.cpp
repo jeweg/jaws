@@ -36,7 +36,7 @@ std::string get_formatted_stackframes(int stackframes_skipped)
     return oss.str();
 }
 
-} // namespace detail
+}
 
 
 /// Building block for fatal handler.
@@ -87,4 +87,4 @@ void DefaultFatalHandler(FatalError error_code, std::string_view msg, const char
     std::abort();
 }
 
-} // namespace jaws
+}

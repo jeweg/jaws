@@ -78,4 +78,4 @@ public:
 };
 #endif
 
-} // namespace jaws::util
+}

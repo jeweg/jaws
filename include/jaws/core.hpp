@@ -87,4 +87,4 @@ constexpr const char *get_rtti_type_name()
 }
 #endif
 
-} // namespace jaws
+}

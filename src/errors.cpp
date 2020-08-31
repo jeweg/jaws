@@ -12,4 +12,4 @@ std::string to_string(ResultCode r)
     }
 }
 
-} // namespace jaws
+}

@@ -1,4 +1,4 @@
-﻿#include "jaws/jaws.hpp"
+#include "jaws/jaws.hpp"
 #include "jaws/util/misc.hpp"
 #include "jaws/util/file_observer.hpp"
 #include "jaws/vulkan/utils.hpp"
@@ -1160,7 +1160,7 @@ int main(int argc, char** argv)
 }
 #else
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     return 0;
 }

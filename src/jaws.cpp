@@ -94,4 +94,4 @@ FatalHandler get_fatal_handler()
     return g_fatal_handler;
 }
 
-} // namespace jaws
+}

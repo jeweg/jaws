@@ -1,4 +1,4 @@
-﻿#include "jaws/filesystem.hpp"
+#include "jaws/filesystem.hpp"
 #include "absl/hash/hash.h"
 #include "absl/container/flat_hash_set.h"
 #include <iostream>
@@ -14,7 +14,7 @@ struct UserType
     fs::path p;
 
     template <typename H>
-    friend H AbslHashValue(H h, const UserType& c)
+    friend H AbslHashValue(H h, const UserType &c)
     {
         return H::combine(std::move(h), c.foo, c.bar, c.p);
     }
@@ -26,9 +26,9 @@ namespace std {
 template <>
 struct hash<std::filesystem::path>
 {
-    size_t operator()(std::filesystem::path const& s) const noexcept { return std::hash<std::string>{}(s.string()); }
+    size_t operator()(std::filesystem::path const &s) const noexcept { return std::hash<std::string>{}(s.string()); }
 };
-} // namespace std
+}
 
 int main()
 {

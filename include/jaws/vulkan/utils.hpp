@@ -25,4 +25,4 @@ T choose_best(const std::vector<T> &candidates, FUNC f)
     return best_one;
 }
 
-} // namespace jaws::vulkan
+}

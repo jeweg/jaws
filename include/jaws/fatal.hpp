@@ -31,7 +31,7 @@ LogFatalError(FatalError error_code, std::string_view msg, const char *function,
 void JAWS_API
 DefaultFatalHandler(FatalError error_code, std::string_view msg, const char *function, const char *file, long line);
 
-} // namespace jaws
+}
 
 #define JAWS_FATAL0() \
     (::jaws::get_fatal_handler()(::jaws::FatalError::Unspecified, {}, JAWS_CURRENT_FUNCTION, __FILE__, __LINE__))

@@ -11,4 +11,4 @@ class ShaderSystem;
 struct ShaderCreateInfo;
 class Shader;
 
-} // namespace jaws::vulkan
+}

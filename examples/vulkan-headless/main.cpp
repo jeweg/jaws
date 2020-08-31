@@ -26,7 +26,7 @@ jaws::LoggerPtr logger;
 
 //=========================================================================
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     return jaws::util::Main(argc, argv, [&](auto, auto) {
         jaws::Jaws jjj;
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
         jaws::vulkan::Context context;
         context.create(&jjj, context_ci);
 
-        jjj.get_vfs().make_backend<jaws::vfs::FileSystemVfs>("shaders", build_info::PROJECT_SOURCE_DIR / "shaders");
+        jjj.get_vfs().make_backend<jaws::vfs::FileSystemBackend>("shaders", build_info::PROJECT_SOURCE_DIR / "shaders");
 
         jaws::vulkan::Device device;
         device.create(&context);
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
         // for (;;) { jaws::vulkan::ShaderPtr my_shader = device.get_shader(shader_ci); }
         jaws::vulkan::ShaderPtr my_shader = device.get_shader(shader_ci);
 
-        logger->info("&shader: {}", (void*)my_shader.get());
+        logger->info("&shader: {}", (void *)my_shader.get());
 
 #if 0
         // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

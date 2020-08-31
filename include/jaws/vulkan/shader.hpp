@@ -62,4 +62,4 @@ private:
     friend class ShaderSystem;
 };
 
-} // namespace jaws::vulkan
+}

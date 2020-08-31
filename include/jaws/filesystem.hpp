@@ -49,4 +49,4 @@ H AbslHashValue(H h, const std::filesystem::path &p)
     return H::combine(std::move(h), p.string());
 }
 
-} // namespace FILESYSTEM_NS
+}

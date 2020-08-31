@@ -104,4 +104,4 @@ public:
     static int get_alive_instance_count() noexcept { return alive_instance_count(); }
 };
 
-} // namespace jaws::util
+}

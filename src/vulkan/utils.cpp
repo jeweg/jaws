@@ -14,4 +14,4 @@ void Handle(VkResult result)
 }
 */
 
-} // namespace jaws::vulkan
+}

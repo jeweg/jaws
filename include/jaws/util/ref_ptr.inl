@@ -132,4 +132,4 @@ size_t RefCounted<Derived>::get_ref_count() const noexcept
     return _ref_count.load(std::memory_order_acquire);
 }
 
-} // namespace jaws::util
+}

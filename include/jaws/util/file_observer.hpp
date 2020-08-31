@@ -2,9 +2,7 @@
 #include "jaws/core.hpp"
 #include "jaws/filesystem.hpp"
 #include <memory>
-#include <limits>
-
-// https://stackoverflow.com/questions/54024915/how-to-monitor-file-changes-via-win-api
+#include <vector>
 
 namespace jaws::util {
 
@@ -44,4 +42,4 @@ private:
     std::unique_ptr<detail::FileObserverImpl> _impl;
 };
 
-} // namespace jaws::util
+}

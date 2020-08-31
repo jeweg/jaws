@@ -56,7 +56,7 @@ public:
     auto end() { return WrappingIterator<decltype(std::end(_range))>(0, std::end(_range)); }
 };
 
-} // namespace jaws::util::detail
+}
 
 namespace jaws::util {
 
@@ -85,7 +85,7 @@ auto enumerate_range(std::initializer_list<RangeElemType> r)
     return detail::EnumerateRangeProxy<std::initializer_list<RangeElemType>>(r);
 }
 
-} // namespace jaws::util
+}
 
 //=========================================================================
 // enumerate_range_total
@@ -143,7 +143,7 @@ public:
     auto end() { return WrappingIteratorTotal<decltype(std::end(_range))>(0, _total, std::end(_range)); }
 };
 
-} // namespace jaws::util::detail
+}
 
 namespace jaws::util {
 
@@ -172,4 +172,4 @@ auto enumerate_range_total(std::initializer_list<RangeElemType> r)
     return detail::EnumerateRangeTotalProxy<std::initializer_list<RangeElemType>>(r);
 }
 
-} // namespace jaws::util
+}

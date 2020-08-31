@@ -30,6 +30,6 @@ extern JAWS_API HINSTANCE GetHInstance();
 extern JAWS_API std::string HResultToString(HRESULT res);
 extern JAWS_API std::string ErrorCodeToString(DWORD err);
 
-} // namespace jaws
+}
 
 #endif
