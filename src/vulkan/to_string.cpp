@@ -131,9 +131,8 @@ typedef struct VkSurfaceCapabilitiesKHR {
     return sb.str();
 }
 
-std::string to_string(VkColorSpaceKHR e)
-{
-    return std::to_string(static_cast<int32_t>(e));
-}
 
-} // namespace jaws::vulkan
+// #BEGIN# generated code. Do not remove this marker.
+// #END# generated code. Do not remove this marker.
+
+}
