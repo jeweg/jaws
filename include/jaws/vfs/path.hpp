@@ -32,7 +32,7 @@ public:
     Path(Path &&other) noexcept;
 
     Path &operator=(const Path &p);
-    Path &operator=(const Path &&p) noexcept;
+    Path &operator=(Path &&p) noexcept;
 
     Path get_parent_path() const;
 
@@ -82,7 +82,7 @@ private:
 };
 
 
-} // namespace jaws::vfs
+}
 
 namespace std {
 
