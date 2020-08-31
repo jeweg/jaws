@@ -3,6 +3,17 @@
 
 namespace jaws::util {
 
+// std::remove_cvref is not in C++17.
+template <class T>
+struct remove_cvref
+{
+    using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+template <class T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+
+//------------------------------------------------------
+
 template <typename T, typename Enable = void>
 struct type_traits
 {
@@ -57,4 +68,4 @@ const char *get_type_string_repr(T &&expr)
     return jaws::util::type_traits<T>::string_repr;
 };
 
-} // namespace jaws::util
+}
