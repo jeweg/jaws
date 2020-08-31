@@ -14,10 +14,7 @@ std::string fixed_domain(const std::string &d)
     return d;
 }
 
-} // namespace detail
-
-Vfs::Vfs() : _fingerprint_cache(1000, 100) {}
-
+}
 
 void Vfs::add_backend(const std::string &domain, std::unique_ptr<vfs::VfsBackend> ptr)
 {
@@ -51,20 +48,6 @@ const vfs::VfsBackend *Vfs::lookup_backend(const jaws::vfs::Path &path) const
 
 size_t Vfs::get_fingerprint(const jaws::vfs::Path &path, bool allow_cached) const
 {
-    // TODO: what was I thinking here?
-#if 0
-    constexpr uint64_t MAX_CACHE_REALTIME_AGE_MS = 500;
-    auto now = jaws::util::get_time_point();
-    if (allow_cached) {
-        _fingerprint_cache.tick_clock();
-        if (CachedFingerprint *cached = _fingerprint_cache.lookup_unless(path, [&](auto, CachedFingerprint *value) {
-                return util::get_delta_time_ms(now, value->updated_time_point) <= MAX_CACHE_REALTIME_AGE_MS;
-            })) {
-            return cached->fingerprint;
-        }
-    }
-#endif
-    // We must actually compute the fingerprint.
     if (const VfsBackend *backend = lookup_backend(path)) {
         size_t fp = backend->get_file_fingerprint(path);
         //_fingerprint_cache.insert(path, CachedFingerprint{fp, now});
@@ -106,4 +89,4 @@ Path Vfs::make_canonical(Path path) const
 }
 
 
-} // namespace jaws::vfs
+}
