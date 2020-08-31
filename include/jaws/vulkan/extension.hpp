@@ -4,6 +4,7 @@
 #include "absl/container/flat_hash_map.h"
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 namespace jaws::vulkan {
 
@@ -30,6 +31,7 @@ public:
     bool contains(const Extension &) const;
     bool contains(const ExtensionList &) const;
 
+    void clear() { _exts.clear(); }
     size_t size() const { return _exts.size(); }
     bool empty() const { return _exts.empty(); }
 
@@ -81,4 +83,4 @@ private:
     MapType _exts;
 };
 
-} // namespace jaws::vulkan
+}
