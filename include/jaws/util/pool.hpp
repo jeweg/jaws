@@ -7,67 +7,121 @@
 namespace jaws::util {
 
 
-// TODO: check incoming ids against pool id. might also assign pool ids automatically.
+/*
+template <typename NumericIdType, size_t generation_bits, size_t index_bits>
+struct PoolId
+{
+    static_assert(std::is_integral_v<NumericIdType>, "!");
+    static_assert(sizeof(NumericIdType) * 8 >= generation_bits + index_bits, "!");
+    static_assert(index_bits > 0, "!");
 
-template <typename ElementType>
+    PoolId() noexcept = default;
+    PoolId(NumericIdType id) noexcept : _id(id) {}
+    PoolId(NumericIdType generation, NumericIdType index) noexcept : _id((generation << index_bits) | (index + 1)) {}
+
+    bool is_valid() const { return _id != 0; }
+
+    static constexpr NumericIdType GENERATION_MASK = (static_cast<NumericIdType>(1) << generation_bits) - 1;
+    static constexpr NumericIdType INDEX_MASK = (static_cast<NumericIdType>(1) << index_bits) - 1;
+
+    NumericIdType get_generation() const noexcept { return (_id >> index_bits) & GENERATION_MASK; }
+    NumericIdType get_index() const noexcept { return (_id & INDEX_MASK) - 1; }
+
+    NumericIdType _id = 0;
+};
+*/
+
+
+template <typename ElementType, typename NumericIdType = uint64_t, size_t generation_bits = 16, size_t index_bits = 32>
 class Pool
 {
-public:
-    Pool(uint16_t pool_id, uint32_t initial_capacity, float growth_factor = 1.5);
+    static_assert(std::is_integral_v<NumericIdType>, "!");
+    static_assert(64 >= 16 + 32, "!!!");
+    static_assert(sizeof(NumericIdType) * 8 >= generation_bits + index_bits, "!");
+    static_assert(index_bits > 0, "!");
 
-    using element_type = ElementType;
+public:
+    // using Id = PoolId<NumericIdType, generation_bits, index_bits>;
+    struct Id
+    {
+        Id() noexcept = default;
+        Id(NumericIdType id) noexcept : _id(id) {}
+        Id(NumericIdType generation, NumericIdType index) noexcept : _id((generation << index_bits) | (index + 1)) {}
+
+        bool is_valid() const { return _id != 0; }
+
+        static constexpr NumericIdType GENERATION_MASK = (static_cast<NumericIdType>(1) << generation_bits) - 1;
+        static constexpr NumericIdType INDEX_MASK = (static_cast<NumericIdType>(1) << index_bits) - 1;
+
+        NumericIdType get_generation() const noexcept { return (_id >> index_bits) & GENERATION_MASK; }
+        NumericIdType get_index() const noexcept { return (_id & INDEX_MASK) - 1; }
+
+        friend bool operator==(Id a, Id b) noexcept { return a._id == b._id; }
+        friend bool operator!=(Id a, Id b) noexcept { return !(a == b); }
+
+        NumericIdType _id = 0;
+    };
+
+    static constexpr size_t MAX_ELEM_COUNT = static_cast<size_t>(
+        (static_cast<NumericIdType>(1) << index_bits) - 1); // Subtract 1 b/c index 0 is used for invalid id.
+
+    Pool(NumericIdType initial_capacity = 0, float growth_factor = 1.5);
+    Pool(const Pool &) = delete;
+    Pool &operator=(const Pool &) = delete;
+    ~Pool();
 
     template <typename... Args>
-    uint64_t emplace(Args &&... args);
+    Id emplace(Args &&... args);
 
     // I've tried turning the two insert overloads into one function
     // using forward references, but it seemed to me to get unnecessarily
     // convoluted and hard to maintain.
-    uint64_t insert(ElementType &&elem);
-    uint64_t insert(const ElementType &elem);
+    Id insert(ElementType &&elem);
+    Id insert(const ElementType &elem);
 
-    bool remove(uint64_t id);
+    bool remove(Id);
 
-    ElementType *lookup(uint64_t id);
-    const ElementType *lookup(uint64_t id) const;
+    ElementType *lookup(Id);
+    const ElementType *lookup(Id) const;
 
-    bool empty() const { return get_element_count() == 0; }
-    uint32_t get_element_count() const;
+    bool empty() const;
+    size_t get_element_count() const;
 
-    uint32_t get_capacity() const;
+    size_t get_capacity() const;
 
 private:
     struct PoolSlot
     {
-        uint16_t generation : 15;
-        uint16_t holds_element : 1;
+        NumericIdType generation = 0;
+        bool holds_element = false;
 
         // union: bad because it doesn't handle destructors.
-        // std::variant: how can we handle the case of ElementType being uint32_t, the same as its next-free-index
-        // variant type?
-        // Hence this implementation: TODO
+        // std::variant: how can we handle the case of ElementType being uint32_t,
+        // the same as its next-free-index variant type? std::variant only allows
+        // to query for the used element if the types are distinct.
+        // So I'm settling for this.. it's very low-level, but can be encapsulated
+        // nicely here.
+        std::array<uint8_t, (sizeof(ElementType) > sizeof(size_t) ? sizeof(ElementType) : sizeof(size_t))> data;
 
-        std::array<uint8_t, (sizeof(ElementType) > 4 ? sizeof(ElementType) : 4)> data;
-
-        uint32_t &next_free_index()
+        size_t &as_next_free_index()
         {
             JAWS_ASSUME(!holds_element);
-            return *reinterpret_cast<uint32_t *>(data.data());
+            return *reinterpret_cast<size_t *>(data.data());
         }
 
-        ElementType *element()
+        ElementType *as_element()
         {
             JAWS_ASSUME(holds_element);
             return reinterpret_cast<ElementType *>(data.data());
         }
 
-        const ElementType *element() const
+        const ElementType *as_element() const
         {
             JAWS_ASSUME(holds_element);
             return reinterpret_cast<const ElementType *>(data.data());
         }
 
-        PoolSlot() : generation(0), holds_element(0) {}
+        PoolSlot() = default;
         ~PoolSlot() { cleanup(); }
         PoolSlot(const PoolSlot &) = delete;
         PoolSlot &operator=(const PoolSlot &) = delete;
@@ -76,27 +130,17 @@ private:
 
         void cleanup()
         {
-            if (holds_element) { element()->~ElementType(); }
+            if (holds_element) { as_element()->~ElementType(); }
             holds_element = 0;
         }
     };
 
-    uint32_t alloc_pool_slot(); //< Returns the index.
+    // Returns the index or 0 if not possible.
+    size_t alloc_pool_slot();
 
-    static constexpr uint32_t extract_index(uint64_t id) { return id & 0xffffffff; }
-    static constexpr uint16_t extract_generation(uint64_t id) { return (id >> 32) & 0x7fff; }
-    static constexpr uint16_t extract_pool_id(uint64_t id) { return (id >> 48) & 0xffff; }
-
-    static constexpr uint16_t next_generation(uint16_t gen) { return (gen + 1) % 0x8000; }
-    constexpr uint64_t make_id(uint32_t index, uint16_t gen)
-    {
-        return (static_cast<uint64_t>(_pool_id) << 48) | (static_cast<uint64_t>(gen) << 32) | index;
-    }
-
-    uint16_t _pool_id;
-    uint32_t _element_count;
+    size_t _element_count;
     float _growth_factor;
-    uint32_t _first_free_elem;
+    size_t _first_free_elem;
     std::vector<PoolSlot> _pool_slots;
 };
 
