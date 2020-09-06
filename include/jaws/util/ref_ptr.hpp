@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gtest/gtest_prod.h"
 #include <cstddef>
 #include <atomic>
 
@@ -81,6 +82,8 @@ protected:
     virtual void on_all_references_dropped() {}
 
 private:
+    FRIEND_TEST(ref_ptr_test, basic);
+
     // Note: it's important to go through Derived and not RefCounted<Derived>.
     // We don't want to require virtual destructors or RTTI (dynamic_cast) for this.
     friend void ref_ptr_remove_ref(Derived *rc)

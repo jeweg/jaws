@@ -1,9 +1,11 @@
-﻿#include "jaws/util/ref_ptr.hpp"
+#include "jaws/util/ref_ptr.hpp"
 #include "jaws/util/instance_counter.hpp"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace jaws::util;
+
+namespace jaws::util {
 
 struct A : public RefCounted<A>, public jaws::util::InstanceCounter<A>
 {};
@@ -37,3 +39,6 @@ TEST(ref_ptr_test, basic)
     dummy = nullptr;
     EXPECT_EQ(A::get_alive_instance_count(), 0);
 }
+
+}
+
