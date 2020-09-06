@@ -12,7 +12,6 @@ option(BUILD_EXAMPLES "Build the examples?" ON)
 option(BUILD_TESTS "Build the tests?" ON)
 option(BUILD_EXPERIMENTS "Build the experiments?" ON)
 option(BUILD_UTILS "Build the utils?" ON)
-option(SUPPORT_OPENGL "Support for OpenGL?" OFF)
 option(SUPPORT_VULKAN "Support for Vulkan?" ON)
 option(USE_COTIRE "Use cotire to generate a unity build?" ON)
 option(SEPARATE_HEADER_IMPL "Separate trees for header and impl files in an IDE?" OFF)
@@ -57,8 +56,8 @@ project(jaws VERSION 0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
-# Is this built standd-alone or via add_subdirectory?
-# Set JAWS_MASTER_PROJECT to ON if building jaws by itself!
+# Is this built standalone or via add_subdirectory?
+# Set JAWS_MASTER_PROJECT to ON if building jaws by itself.
 if (NOT DEFINED JAWS_MASTER_PROJECT)
     if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
         set(JAWS_MASTER_PROJECT ON)
@@ -105,18 +104,6 @@ if (SUPPORT_VULKAN)
     endif()
 endif()
 
-if (SUPPORT_OPENGL)
-    find_package(OpenGL)
-    if (NOT OpenGL_FOUND)
-        message("OpenGL not found, disabling OpenGL support.")
-        set(SUPPORT_OPENGL OFF)
-    else()
-        # TODO: maybe separate logic dependiing on
-        # whether we hav GLVND or not, etc.
-    endif()
-endif()
-
-
 #################################################################################
 # The jaws library
 #################################################################################
@@ -139,16 +126,6 @@ set(src_root
     src/windows.cpp
     src/fatal.cpp
     src/errors.cpp
-)
-set(src_opengl
-    include/jaws/opengl/opengL.hpp
-    include/jaws/opengl/context.hpp
-    src/opengl/opengL.cpp
-    src/opengl/context.cpp
-    src/opengl/context_impl_windows.hpp
-    src/opengl/context_impl_windows.cpp
-    include/jaws/opengl/glad/glad.h
-    src/opengl/glad/glad.c
 )
 set(src_vulkan
     include/jaws/vulkan/fwd.hpp
@@ -176,19 +153,6 @@ set(src_vulkan
     src/vulkan/image.cpp
     #src/vulkan/sediment.cpp
 )
-
-if (WIN32)
-    list(APPEND src_opengl
-        include/jaws/opengl/glad/glad_wgl.h
-        src/opengl/glad/glad_wgl.c
-    )
-elseif (UNIX)
-    list(APPEND src_opengl
-        include/jaws/opengl/glad/glad_glx.h
-        src/opengl/glad/glad_glx.c
-    )
-endif()
-
 set(src_util
     include/jaws/util/pool.hpp
     include/jaws/util/pool.inl
@@ -231,10 +195,6 @@ set(all_source
     ${src_3rdparty}
 )
 
-if (SUPPORT_OPENGL)
-    list(APPEND all_source ${src_opengl})
-endif()
-
 if (SUPPORT_VULKAN)
     list(APPEND all_source ${src_vulkan})
 endif()
@@ -246,7 +206,6 @@ if (SEPARATE_HEADER_IMPL)
 else()
     # Manual organization reflecting namespaces
     source_group("jaws" FILES ${src_root})
-    source_group("jaws\\opengl" FILES ${src_opengl})
     source_group("jaws\\vulkan" FILES ${src_vulkan})
     source_group("jaws\\util" FILES ${src_util})
     source_group("jaws\\vfs" FILES ${src_vfs})
@@ -324,12 +283,6 @@ PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rd-party>
 
-	# TODO: Unfortunately, glad includes its khronos headers
-	# using <> syntax which does not try file-relative lookup but requires
-	# an include path. I'd like to avoid this, though.
-    $<INSTALL_INTERFACE:include/jaws/opengl/glad>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/jaws/opengl/glad>
-
     # Users must be able to find jaws_export.h:
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 PRIVATE
@@ -374,12 +327,6 @@ if (SUPPORT_VULKAN)
         spirv-cross-glsl
         spirv-cross-reflect
     )
-endif()
-if (SUPPORT_OPENGL)
-    target_link_libraries(jaws
-    PUBLIC
-        OpenGL::GL
-)
 endif()
 set_target_properties(jaws PROPERTIES
     DEBUG_POSTFIX "d"
