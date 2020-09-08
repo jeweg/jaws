@@ -5,7 +5,7 @@
 
 namespace jaws::vulkan {
 
-BufferResource::BufferResource(Device *device, const VkBufferCreateInfo &ci, VmaMemoryUsage usage) : device(device)
+Buffer::Buffer(Device *device, const VkBufferCreateInfo &ci, VmaMemoryUsage usage) : device(device)
 {
     JAWS_ASSUME(device);
     VmaAllocationCreateInfo alloc_info = {};
@@ -15,7 +15,7 @@ BufferResource::BufferResource(Device *device, const VkBufferCreateInfo &ci, Vma
 }
 
 
-BufferResource::~BufferResource()
+Buffer::~Buffer()
 {
     vmaDestroyBuffer(device->get_vma_allocator(), handle, vma_allocation);
 }
