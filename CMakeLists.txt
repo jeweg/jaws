@@ -30,7 +30,9 @@ vcpkg_cmake_package(fmt)
 vcpkg_cmake_package(glm)
 vcpkg_cmake_package(spdlog)
 vcpkg_cmake_package(abseil FEATURES cxx17)
-vcpkg_cmake_package(xxhash)
+
+# TODO: xxhash doesn't get properly installed by vcpkg. I might fix that later on.
+#vcpkg_cmake_package(xxhash)
 
 if (SUPPORT_VULKAN)
     vcpkg_cmake_package(volk)
@@ -248,7 +250,13 @@ set(glm_defines
 
 find_package(absl CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(xxHash CONFIG REQUIRED)
+
+# TODO: through vcpkg I'd like to be able to use find_package(xxHash CONFIG REQUIRED),
+# alas, that seems to be broken at the moment.
+# Using xxHash as a subdirectory for now.
+set(XXHASH_BUILD_ENABLE_INLINE_API ON)
+set(XXHASH_BUILD_XXHSUM OFF)
+add_subdirectory(external/xxHash/cmake_unofficial EXCLUDE_FROM_ALL)
 
 # Alias that matches the imported target when used from installation.
 # This way code within the build tree (examples, tests) can use the same target name.
