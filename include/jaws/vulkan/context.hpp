@@ -1,11 +1,11 @@
 #pragma once
 #include "jaws/core.hpp"
 #include "jaws/jaws.hpp"
+#include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/vulkan.hpp"
 #include "jaws/vulkan/extension.hpp"
 #include "jaws/util/misc.hpp"
-#include "absl/types/span.h"
-#include "absl/container/flat_hash_map.h"
+#include "jaws/util/pool.hpp"
 #include <vector>
 #include <array>
 
@@ -116,8 +116,8 @@ public:
     bool is_headless() const { return _headless; }
 
     const ExtensionList &get_instance_extensions() const { return _instance_extensions; }
-
     const ExtensionList &get_instance_layers() const { return _instance_layers; }
+
 
 private:
     VkInstance _vk_instance = VK_NULL_HANDLE;
@@ -126,7 +126,6 @@ private:
     VkDebugUtilsMessengerEXT _debug_messenger = VK_NULL_HANDLE;
     ExtensionList _instance_extensions;
     ExtensionList _instance_layers;
-
     bool _headless = false;
 };
 
