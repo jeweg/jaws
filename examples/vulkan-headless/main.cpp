@@ -1,28 +1,23 @@
-﻿#include "jaws/jaws.hpp"
-#include "jaws/logging.hpp"
-#include "jaws/util/main_wrapper.hpp"
-#include "jaws/util/indentation.hpp"
-#include "jaws/filesystem.hpp"
-#include "jaws/vfs/vfs.hpp"
-#include "jaws/vfs/file_system_vfs.hpp"
-#include "jaws/vulkan/shader.hpp"
-#include "jaws/vulkan/context.hpp"
-#include "jaws/vulkan/device.hpp"
+#if 0
 
-#include "build_info.h"
+#    include "jaws/jaws.hpp"
+#    include "jaws/logging.hpp"
+#    include "jaws/util/main_wrapper.hpp"
+#    include "jaws/util/indentation.hpp"
+#    include "jaws/filesystem.hpp"
+#    include "jaws/vfs/vfs.hpp"
+#    include "jaws/vfs/file_system_backend.hpp"
+#    include "jaws/vulkan/shader.hpp"
+#    include "jaws/vulkan/context.hpp"
+#    include "jaws/vulkan/device.hpp"
 
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <fstream>
-#include <iostream>
+#    include "build_info.h"
 
-//=========================================================================
-
-jaws::LoggerPtr logger;
-
-//=========================================================================
-
+#    include <vector>
+#    include <string>
+#    include <algorithm>
+#    include <fstream>
+#    include <iostream>
 
 //=========================================================================
 
@@ -54,7 +49,6 @@ int main(int argc, char **argv)
 
         logger->info("&shader: {}", (void *)my_shader.get());
 
-#if 0
         // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         auto BuildGlslShaderModule = [](VkDevice device,
@@ -192,10 +186,11 @@ int main(int argc, char **argv)
              */
 
         // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-#endif
 
-        JAWS_FATAL1("Hello!");
+    JAWS_FATAL1("Hello!");
 
-        return 0;
-    });
+    return 0;
+});
 }
+
+#endif
