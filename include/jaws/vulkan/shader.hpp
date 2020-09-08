@@ -2,6 +2,7 @@
 #include "jaws/core.hpp"
 #include "jaws/vulkan/vulkan.hpp"
 #include "jaws/util/ref_ptr.hpp"
+#include "jaws/vfs/path.hpp"
 
 #include <vector>
 #include <utility>
