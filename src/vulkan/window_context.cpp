@@ -38,6 +38,9 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
 
     VkPhysicalDeviceSurfaceInfo2KHR surface_info = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR};
     surface_info.surface = _surface;
+    VkSurfaceFullScreenExclusiveWin32InfoEXT foo = {VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT};
+    surface_info.pNext = &foo;
+
 
     // SFI: support
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSurfaceFullScreenExclusiveWin32InfoEXT.html
@@ -77,11 +80,12 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
         to_string(_surface_format.surfaceFormat.colorSpace));
         */
 
-    const auto physical_device = _device->get_physical_device();
+    _surface_capabilities = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR};
+    _surface_capabilites_fse = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT};
+    _surface_capabilities.pNext = &_surface_capabilites_fse;
 
-    _surface_capabilities = {};
-    VkResult result =
-        vkGetPhysicalDeviceSurfaceCapabilities2KHR(physical_device, &surface_info, &_surface_capabilities);
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilities2KHR(
+        _device->get_physical_device(), &surface_info, &_surface_capabilities);
     JAWS_VK_HANDLE_FATAL(result);
 }
 
@@ -105,7 +109,6 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     VkResult result = {};
 
     const auto &surfaceCapabilities = _surface_capabilities.surfaceCapabilities;
-
 
     //-------------------------------------------------------------------------
     // Extent
@@ -253,7 +256,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     //-------------------------------------------------------------------------
     // Create image views for the swap chain images so that we can eventually render into them.
 
-    std::vector<VkImageView> swapchain_image_views(swapchain_images.size());
+    _swapchain_image_views.resize(swapchain_images.size());
     for (size_t i = 0; i < swapchain_images.size(); ++i) {
         VkImageSubresourceRange subresource_range = {};
         subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -268,7 +271,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         ci.subresourceRange = subresource_range;
         ci.format = _surface_format.surfaceFormat.format;
 
-        result = vkCreateImageView(_device->get_device(), &ci, nullptr, &swapchain_image_views[i]);
+        result = vkCreateImageView(_device->get_device(), &ci, nullptr, &_swapchain_image_views[i]);
         JAWS_VK_HANDLE_FATAL(result);
     }
 
@@ -302,6 +305,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         ci.format = DEPTH_FORMAT;
         ci.extent.width = extent.width;
         ci.extent.height = extent.height;
+        ci.extent.depth = 1;
         std::memcpy(&ci.extent, &extent, sizeof(extent));
         ci.mipLevels = 1;
         ci.arrayLayers = 1;
@@ -311,22 +315,20 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
 
         _depth_image = _device->create_image(ci, VMA_MEMORY_USAGE_GPU_ONLY);
 
-#if 0
-    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.size = 65536;
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    result = vmaCreateBuffer(_vma_allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-    JAWS_VK_HANDLE_FATAL(result);
-
-    vmaDestroyBuffer(_vma_allocator, buffer, allocation);
-#endif
+        VkImageSubresourceRange subresource_range = {};
+        subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        subresource_range.baseMipLevel = 0;
+        subresource_range.levelCount = 1;
+        subresource_range.baseArrayLayer = 0;
+        subresource_range.layerCount = 1;
+        VkImageViewCreateInfo view_ci = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        view_ci.image = _device->get_image(_depth_image)->handle;
+        view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_ci.subresourceRange = subresource_range;
+        view_ci.format = DEPTH_FORMAT;
+        result = vkCreateImageView(_device->get_device(), &view_ci, nullptr, &_depth_view);
+        JAWS_VK_HANDLE_FATAL(result);
     }
-};
+}
 
 }
