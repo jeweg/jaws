@@ -92,7 +92,7 @@ struct hash<jaws::vfs::Path>
     size_t operator()(const jaws::vfs::Path &p) const { return p.get_hash_value(); }
 };
 
-}; // namespace std
+}
 
 template <>
 struct fmt::formatter<jaws::vfs::Path> : formatter<absl::string_view>
