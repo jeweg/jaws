@@ -5,7 +5,7 @@
 
 namespace jaws::vulkan {
 
-ImageResource::ImageResource(Device *device, const VkImageCreateInfo &ci, VmaMemoryUsage usage) : device(device)
+Image::Image(Device *device, const VkImageCreateInfo &ci, VmaMemoryUsage usage) : device(device)
 {
     JAWS_ASSUME(device);
     VmaAllocationCreateInfo alloc_info = {};
@@ -15,7 +15,7 @@ ImageResource::ImageResource(Device *device, const VkImageCreateInfo &ci, VmaMem
 }
 
 
-ImageResource::~ImageResource()
+Image::~Image()
 {
     vmaDestroyImage(device->get_vma_allocator(), handle, vma_allocation);
 }
