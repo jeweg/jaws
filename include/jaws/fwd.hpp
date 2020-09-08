@@ -1,13 +1,10 @@
 #pragma once
 #include "vfs/fwd.hpp"
-#include "vulkan/fwd.hpp"
 #include "spdlog/logger.h"
 #include <functional>
 #include <string>
 
 namespace jaws {
-
-class Jaws;
 
 enum class FatalError : int32_t
 {
@@ -18,7 +15,6 @@ enum class FatalError : int32_t
 
 using FatalHandler = std::function<void(
     FatalError error_code, const std::string &msg, const char *function, const char *file, long line)>;
-
 
 class Logging;
 enum class Category
