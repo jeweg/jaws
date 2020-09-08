@@ -108,6 +108,15 @@ Pool<ElementType, NumericIdType, generation_bits, index_bits>::insert(const Elem
 
 
 template <typename ElementType, typename NumericIdType, size_t generation_bits, size_t index_bits>
+void Pool<ElementType, NumericIdType, generation_bits, index_bits>::clear()
+{
+    _pool_slots.clear();
+    _element_count = 0;
+    _first_free_elem = -1;
+}
+
+
+template <typename ElementType, typename NumericIdType, size_t generation_bits, size_t index_bits>
 bool Pool<ElementType, NumericIdType, generation_bits, index_bits>::remove(Id id)
 {
     auto index = id.get_index();

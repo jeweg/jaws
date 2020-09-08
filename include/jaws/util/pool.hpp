@@ -7,31 +7,6 @@
 namespace jaws::util {
 
 
-/*
-template <typename NumericIdType, size_t generation_bits, size_t index_bits>
-struct PoolId
-{
-    static_assert(std::is_integral_v<NumericIdType>, "!");
-    static_assert(sizeof(NumericIdType) * 8 >= generation_bits + index_bits, "!");
-    static_assert(index_bits > 0, "!");
-
-    PoolId() noexcept = default;
-    PoolId(NumericIdType id) noexcept : _id(id) {}
-    PoolId(NumericIdType generation, NumericIdType index) noexcept : _id((generation << index_bits) | (index + 1)) {}
-
-    bool is_valid() const { return _id != 0; }
-
-    static constexpr NumericIdType GENERATION_MASK = (static_cast<NumericIdType>(1) << generation_bits) - 1;
-    static constexpr NumericIdType INDEX_MASK = (static_cast<NumericIdType>(1) << index_bits) - 1;
-
-    NumericIdType get_generation() const noexcept { return (_id >> index_bits) & GENERATION_MASK; }
-    NumericIdType get_index() const noexcept { return (_id & INDEX_MASK) - 1; }
-
-    NumericIdType _id = 0;
-};
-*/
-
-
 template <typename ElementType, typename NumericIdType = uint64_t, size_t generation_bits = 16, size_t index_bits = 32>
 class Pool
 {
@@ -79,6 +54,7 @@ public:
     Id insert(ElementType &&elem);
     Id insert(const ElementType &elem);
 
+    void clear();
     bool remove(Id);
 
     ElementType *lookup(Id);
@@ -86,6 +62,7 @@ public:
 
     bool empty() const;
     size_t get_element_count() const;
+    size_t size() const { return get_element_count(); }
 
     size_t get_capacity() const;
 
@@ -138,9 +115,9 @@ private:
     // Returns the index or 0 if not possible.
     size_t alloc_pool_slot();
 
-    size_t _element_count;
-    float _growth_factor;
-    size_t _first_free_elem;
+    size_t _element_count = 0;
+    float _growth_factor = 1.5f;
+    size_t _first_free_elem = -1;
     std::vector<PoolSlot> _pool_slots;
 };
 
