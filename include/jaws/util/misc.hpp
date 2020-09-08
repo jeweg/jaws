@@ -92,7 +92,7 @@ T make_default()
 
 struct MovableOnly
 {
-    MovableOnly() = default;
+    MovableOnly() noexcept = default;
     MovableOnly(MovableOnly &&) noexcept = default;
     MovableOnly &operator=(MovableOnly &&) noexcept = default;
     MovableOnly(const MovableOnly &) = delete;
