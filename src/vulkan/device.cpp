@@ -3,13 +3,9 @@
 #include "jaws/vulkan/context.hpp"
 #include "jaws/util/enumerate_range.hpp"
 #include "jaws/vulkan/shader_system.hpp"
-
 #include "jaws/vulkan/vulkan.hpp"
 
-
 namespace jaws::vulkan {
-
-Device::Device() : _image_pool(1, 10), _buffer_pool(2, 10) {}
 
 Device::~Device()
 {
@@ -28,6 +24,13 @@ void Device::create(Context *context, const CreateInfo &ci)
     _vk_instance = context->get_instance();
 
     //=========================================================================
+
+    /*
+    _buffer_pool = _context->create_buffer_pool();
+    _image_pool = _context->create_image_pool();
+    */
+
+    //=========================================================================
     // Physical device group
 
     auto gpu_groups = enumerated<VkPhysicalDeviceGroupProperties>(vkEnumeratePhysicalDeviceGroups, {}, _vk_instance);
@@ -43,7 +46,7 @@ void Device::create(Context *context, const CreateInfo &ci)
     // Must hope any others support the same.
     // TODO: maybe sanity check for that, or even add logic to use their lowest common denominator.
 
-    VkPhysicalDevice pd = _gpu_group.physicalDevices[0];
+    VkPhysicalDevice physical_device = _gpu_group.physicalDevices[0];
 
     //=========================================================================
     // Handle extensions
@@ -64,7 +67,7 @@ void Device::create(Context *context, const CreateInfo &ci)
 
         ExtensionList avail_extensions;
         for (const auto &props :
-             enumerated(vkEnumerateDeviceExtensionProperties, VkExtensionProperties{}, pd, nullptr)) {
+             enumerated(vkEnumerateDeviceExtensionProperties, VkExtensionProperties{}, physical_device, nullptr)) {
             avail_extensions.add(Extension(props.extensionName, props.specVersion));
         }
 
@@ -104,7 +107,7 @@ void Device::create(Context *context, const CreateInfo &ci)
 
     VkQueueFamilyProperties2 queue_fam_elem = {VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2};
     auto all_family_props = jaws::vulkan::enumerated_void<VkQueueFamilyProperties2>(
-        vkGetPhysicalDeviceQueueFamilyProperties2, queue_fam_elem, pd);
+        vkGetPhysicalDeviceQueueFamilyProperties2, queue_fam_elem, physical_device);
 
     // First transform into a form that's more easily digested than the properties interface.
     struct FamilyBit
@@ -134,7 +137,9 @@ void Device::create(Context *context, const CreateInfo &ci)
         if (family_props.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT) { fb |= FamilyBit::Transfer; }
 
         if (!_context->is_headless()) {
-            if (_context->get_presentation_support_callback()(_vk_instance, pd, i)) { fb |= FamilyBit::Present; }
+            if (_context->get_presentation_support_callback()(_vk_instance, physical_device, i)) {
+                fb |= FamilyBit::Present;
+            }
         }
         family_bits[i] = fb;
     }
@@ -301,23 +306,23 @@ void Device::create(Context *context, const CreateInfo &ci)
         device_ci.pNext = &device_group_ci;
         //}
 
-        result = vkCreateDevice(pd, &device_ci, nullptr, &_device);
+        result = vkCreateDevice(physical_device, &device_ci, nullptr, &_vk_device);
         JAWS_VK_HANDLE_FATAL(result);
 
         _has_cap_validation_cache = _extensions.contains("VK_EXT_validation_cache");
     }
-    logger.info("device: {}", (void *)_device);
+    logger.info("device: {}", (void *)_vk_device);
 
     //=========================================================================
 
-    volkLoadDeviceTable(&_f, _device);
+    volkLoadDeviceTable(&_f, _vk_device);
 
     //=========================================================================
     // Retrieve queue objects. We need them later.
 
     _unique_queues.assign(queue_cis.size(), VK_NULL_HANDLE);
     for (const auto &[i, qci] : jaws::util::enumerate_range(queue_cis)) {
-        _f.vkGetDeviceQueue(_device, qci.queueFamilyIndex, 0, &_unique_queues[i]);
+        _f.vkGetDeviceQueue(_vk_device, qci.queueFamilyIndex, 0, &_unique_queues[i]);
         // For each queue info using that family, set the unique queue index.
         for (auto &qi : _queue_infos) {
             if (qi.family_index == qci.queueFamilyIndex) { qi.unique_queue_index = i; }
@@ -351,8 +356,8 @@ void Device::create(Context *context, const CreateInfo &ci)
     _vma_vulkan_functions.vkGetImageMemoryRequirements2KHR = _f.vkGetImageMemoryRequirements2KHR;
 #endif
     VmaAllocatorCreateInfo allocator_info = {};
-    allocator_info.physicalDevice = pd;
-    allocator_info.device = _device;
+    allocator_info.physicalDevice = physical_device;
+    allocator_info.device = _vk_device;
     allocator_info.pVulkanFunctions = &_vma_vulkan_functions;
     if (vma_can_use_dedicated_alloc) { allocator_info.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT; }
     vmaCreateAllocator(&allocator_info, &_vma_allocator);
@@ -383,17 +388,21 @@ void Device::create(Context *context, const CreateInfo &ci)
 
 void Device::destroy()
 {
-    if (_device) {
+    if (_vk_device) {
+        wait_idle();
+        _buffer_pool.clear();
+        _image_pool.clear();
         vmaDestroyAllocator(_vma_allocator);
-        _f.vkDestroyDevice(_device, nullptr);
-        _device = VK_NULL_HANDLE;
+        _f.vkDestroyDevice(_vk_device, nullptr);
+        _vk_device = VK_NULL_HANDLE;
     }
 }
 
 
 void Device::wait_idle()
 {
-    JAWS_VK_HANDLE_FATAL(vkDeviceWaitIdle(_device));
+    JAWS_ASSUME(_vk_device);
+    JAWS_VK_HANDLE_FATAL(vkDeviceWaitIdle(_vk_device));
 }
 
 
@@ -407,23 +416,27 @@ Shader Device::get_shader(const ShaderCreateInfo &ci)
 }
 
 
-Image Device::create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage)
+BufferPool::Id Device::create_buffer(const VkBufferCreateInfo &ci, VmaMemoryUsage usage)
 {
-    uint64_t id = _image_pool.emplace(this, ci, usage);
-    auto *ptr = _image_pool.lookup(id);
-    JAWS_ASSUME(ptr);
-    ptr->id = id;
-    return Image(ptr);
+    return _buffer_pool.emplace(this, ci, usage);
 }
 
 
-Buffer Device::create_buffer(const VkBufferCreateInfo &ci, VmaMemoryUsage usage)
+ImagePool::Id Device::create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage)
 {
-    uint64_t id = _buffer_pool.emplace(this, ci, usage);
-    auto *ptr = _buffer_pool.lookup(id);
-    JAWS_ASSUME(ptr);
-    ptr->id = id;
-    return Buffer(ptr);
+    return _image_pool.emplace(this, ci, usage);
+}
+
+
+Buffer *Device::get_buffer(BufferPool::Id id)
+{
+    return _buffer_pool.lookup(id);
+}
+
+
+Image *Device::get_image(ImagePool::Id id)
+{
+    return _image_pool.lookup(id);
 }
 
 }

@@ -40,7 +40,7 @@ public:
         }
     };
 
-    Device();
+    Device() = default;
     Device(const Device &) = delete;
     Device &operator=(const Device &) = delete;
     ~Device();
@@ -53,7 +53,7 @@ public:
     VkInstance get_instance() const { return _vk_instance; }
 
     Context *get_context() const { return _context; }
-    VkDevice get_device() const { return _device; }
+    VkDevice get_device() const { return _vk_device; }
 
     VkPhysicalDevice get_physical_device(uint32_t index = 0) const;
 
@@ -85,17 +85,19 @@ public:
     // For now expose all of VmaMemoryUsage. Later on I'd like to consolidate this
     // a little, abstract the best way to transfer to GPU for a particular device, etc.
 
-    Image create_image(const VkImageCreateInfo &, VmaMemoryUsage usage);
-    Buffer create_buffer(const VkBufferCreateInfo &, VmaMemoryUsage usage);
+    BufferPool::Id create_buffer(const VkBufferCreateInfo &ci, VmaMemoryUsage usage);
+    Buffer *get_buffer(BufferPool::Id);
+
+    ImagePool::Id create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage);
+    Image *get_image(ImagePool::Id);
 
     //----------------------------------------------------------------
 
 private:
-    friend class BufferResource;
-    friend class ImageResource;
+    friend class Buffer;
+    friend class Image;
 
     VmaAllocator get_vma_allocator() const { return _vma_allocator; }
-
 
 private:
     friend Context;
@@ -103,7 +105,7 @@ private:
 
     VkInstance _vk_instance;
     VkPhysicalDeviceGroupProperties _gpu_group;
-    VkDevice _device = VK_NULL_HANDLE;
+    VkDevice _vk_device = VK_NULL_HANDLE;
 
     VolkDeviceTable _f;
 
@@ -126,9 +128,8 @@ private:
     // std::unique_ptr<Sediment> _sediment;
     std::unique_ptr<ShaderSystem> _shader_system;
 
-
-    jaws::util::Pool<ImageResource> _image_pool;
-    jaws::util::Pool<BufferResource> _buffer_pool;
+    BufferPool _buffer_pool;
+    ImagePool _image_pool;
 };
 
 
