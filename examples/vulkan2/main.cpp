@@ -1,7 +1,7 @@
 #include "jaws/jaws.hpp"
 #include "jaws/logging.hpp"
 #include "jaws/vfs/vfs.hpp"
-#include "jaws/vfs/file_system_vfs.hpp"
+#include "jaws/vfs/file_system_backend.hpp"
 #include "jaws/util/indentation.hpp"
 #include "jaws/util/main_wrapper.hpp"
 
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     return jaws::util::Main(argc, argv, [](auto, auto) {
         // Put a file-system-backed virtual file system starting in the project source dir subdir "shaders".
         jaws::get_vfs().add_backend(
-            "files", std::make_unique<jaws::vfs::FileSystemVfs>(build_info::PROJECT_SOURCE_DIR / "shaders"));
+            "files", std::make_unique<jaws::vfs::FileSystemBackend>(build_info::PROJECT_SOURCE_DIR / "shaders"));
 
         // Piggypacking onto one of jaws' logger categories here.
         logger = &jaws::get_logger();
@@ -45,8 +45,10 @@ int main(int argc, char **argv)
         glfwSetErrorCallback(&glfwErrorCallback);
         if (!glfwVulkanSupported()) { JAWS_FATAL1("glfwVulkanSupported -> false"); }
 
-        uint32_t required_extension_count = 0;
-        const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extension_count);
+        uint32_t glfw_required_extension_count = 0;
+        const char **glfw_required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extension_count);
+        jaws::vulkan::ExtensionList instance_extensions({glfw_required_extensions, glfw_required_extension_count});
+        instance_extensions.add("VK_KHR_surface");
 
         //----------------------------------------------------------------------
         // * Init instance w/ proper layers and instance extensions
@@ -55,7 +57,7 @@ int main(int argc, char **argv)
         jaws::vulkan::Context context;
         context.create(jaws::vulkan::Context::CreateInfo{}
                            //.set_vkGetInstanceProcAddr(glfwGetInstanceProcAddress) // Should work with or without this.
-                           .set_required_instance_extensions({required_extensions, required_extension_count})
+                           .set_required_instance_extensions(instance_extensions)
                            .set_presentation_support_callback(&glfwGetPhysicalDevicePresentationSupport)
                            .set_headless(false));
 
@@ -83,7 +85,8 @@ int main(int argc, char **argv)
         // * Init volk and vulkan-memory-allocator
 
         jaws::vulkan::Device device;
-        device.create(&context);
+        auto device_ci = jaws::vulkan::Device::CreateInfo{}.set_required_extensions({VK_KHR_SWAPCHAIN_EXTENSION_NAME});
+        device.create(&context, device_ci);
 
         //----------------------------------------------------------------------
         // * Chooose a surface format
@@ -98,7 +101,7 @@ int main(int argc, char **argv)
                 device.get_shader(jaws::vulkan::ShaderCreateInfo{}.set_main_source_file("shader.vert"));
         }
 
-        // window_context.create_swap_chain(800, 600);
+        window_context.create_swap_chain(800, 600);
         // Shader* my_shader = get_shader()
 
         glfwSetKeyCallback(glfw_window, [](GLFWwindow *window, int key, int scancode, int action, int mods) {
