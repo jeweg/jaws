@@ -1,3 +1,6 @@
 [submodule "external/vcpkg-cmake"]
 	path = external/vcpkg-cmake
 	url = https://github.com/jweg/vcpkg-cmake
+[submodule "external/xxHash"]
+	path = external/xxHash
+	url = https://github.com/Cyan4973/xxHash.git
