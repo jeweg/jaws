@@ -1,4 +1,4 @@
-﻿#include <jaws/jaws.hpp>
+#include <jaws/jaws.hpp>
 #include <jaws/fatal.hpp>
 
 
@@ -14,10 +14,8 @@ void JustFatalOutWithMsg()
 }
 
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-    // fatal works without jaws initialized.
-
-    //JustFatalOut();
+    // JustFatalOut();
     JustFatalOutWithMsg();
 }
