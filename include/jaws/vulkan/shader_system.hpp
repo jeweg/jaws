@@ -4,26 +4,17 @@
 #include "jaws/vfs/path.hpp"
 #include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/context.hpp"
-#include "jaws/vulkan/device.hpp"
 #include "jaws/vulkan/shader.hpp"
 #include "jaws/util/lru_cache.hpp"
 #include "jaws/util/misc.hpp"
 //#include "sediment.hpp"
 #include <tuple>
 #include <memory>
+#include <vector>
 
 namespace jaws::vulkan {
 
-struct ShaderResource : public jaws::util::RefCounted<ShaderResource>
-{
-    VkShaderModule shader_module = VK_NULL_HANDLE;
-    ShaderSystem *shader_system = nullptr;
-
-    void on_all_references_dropped() override;
-};
-
-
-class ShaderSystem
+class ShaderSystem final
 {
     /*
 

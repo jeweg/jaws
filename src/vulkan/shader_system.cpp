@@ -3,6 +3,7 @@
 #include "jaws/assume.hpp"
 #include "jaws/vfs/vfs.hpp"
 #include "jaws/vulkan/vulkan.hpp"
+#include "jaws/vulkan/device.hpp"
 #include "jaws/vulkan/shader.hpp"
 #include "jaws/vulkan/shader_system.hpp"
 #include "jaws/util/hashing.hpp"
@@ -344,7 +345,7 @@ void ShaderSystem::destroy()
 {
     if (_device) {
         if (_device->supports_validation_cache()) {
-            vkDestroyValidationCacheEXT(_device->get_device(), _validation_cache, nullptr);
+            vkDestroyValidationCacheEXT(_device->vk_handle(), _validation_cache, nullptr);
         }
         //_full_info_cache.clear();
         _device = nullptr;
@@ -359,18 +360,18 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
 
     if (!_validation_cache && _device->supports_validation_cache()) {
         VkValidationCacheCreateInfoEXT ci = {VK_STRUCTURE_TYPE_VALIDATION_CACHE_CREATE_INFO_EXT};
-        JAWS_VK_HANDLE_FATAL(vkCreateValidationCacheEXT(_device->get_device(), &ci, nullptr, &_validation_cache));
+        JAWS_VK_HANDLE_FATAL(vkCreateValidationCacheEXT(_device->vk_handle(), &ci, nullptr, &_validation_cache));
     }
 
     //-------------------------------------------------------------------------
     // Cache lookup
 
     CachedShaderInformation *cached_shader_info =
-        _shader_cache.lookup_unless(shader_ci, [](const ShaderCreateInfo &ci, const CachedShaderInformation *info) {
+        _shader_cache.lookup_or_remove(shader_ci, [](const ShaderCreateInfo &ci, const CachedShaderInformation &info) {
             // Check if the file fingerprints are still up-to-date.
             // If not, we recreate the cache entry. We must assume the fingerprint list
             // is incomplete anyway (more files might be #included now).
-            for (auto &[path, fp] : info->involved_files) {
+            for (auto &[path, fp] : info.involved_files) {
                 size_t curr_fp = get_vfs().get_fingerprint(path);
                 if (fp != curr_fp) {
                     // Returning from here means the cache lookup fails and this entry is removed.
@@ -458,7 +459,7 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
     _shader_cache.insert(shader_ci, CachedShaderInformation{});
     cached_shader_info = _shader_cache.lookup(shader_ci);
 
-    vkCreateShaderModule(_device->get_device(), &mod_ci, nullptr, &(cached_shader_info->shader_resource.shader_module));
+    vkCreateShaderModule(_device->vk_handle(), &mod_ci, nullptr, &(cached_shader_info->shader_resource.shader_module));
 
     return Shader(&(cached_shader_info->shader_resource));
 }
