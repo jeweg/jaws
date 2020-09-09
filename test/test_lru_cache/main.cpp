@@ -99,11 +99,11 @@ TEST(lru_cache_test, aging)
     c.insert(102, "102");
     EXPECT_EQ(c.get_size(), 3);
 
-    c.tick_clock();
+    c.advance_clock();
     c.insert(103, "103");
     EXPECT_EQ(c.get_size(), 4);
 
-    c.tick_clock();
+    c.advance_clock();
     c.insert(104, "104");
     EXPECT_EQ(c.get_size(), 5);
 
@@ -117,7 +117,7 @@ TEST(lru_cache_test, aging)
     c.purge(-1, 0);
     EXPECT_EQ(c.get_size(), 1);
 
-    c.tick_clock();
+    c.advance_clock();
 
     // Again, but nothing was touched since the last
     // clock tick -> purges all.
