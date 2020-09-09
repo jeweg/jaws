@@ -8,7 +8,7 @@
 namespace jaws {
 
 extern JAWS_API bool init(int argc = 0, char **argv = nullptr);
-extern JAWS_API bool destroy();
+extern JAWS_API void destroy();
 
 extern JAWS_API bool is_initialized();
 
@@ -20,5 +20,11 @@ extern JAWS_API const std::vector<std::string> &get_cmd_line_args();
 
 extern JAWS_API void set_fatal_handler(FatalHandler);
 extern JAWS_API FatalHandler get_fatal_handler();
+
+struct InitGuard final
+{
+    InitGuard(int argc, char **argv);
+    ~InitGuard();
+};
 
 }

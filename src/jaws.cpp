@@ -1,6 +1,7 @@
 #include "pch.hpp"
 #include "jaws/jaws.hpp"
 #include "jaws/fatal.hpp"
+#include "jaws/assume.hpp"
 #include "jaws/logging.hpp"
 #include "jaws/vfs/vfs.hpp"
 
@@ -44,14 +45,22 @@ bool init(int argc, char **argv)
 }
 
 
-bool destroy()
+void destroy()
 {
-    if (!g_context) {
-        JAWS_FATAL1("jaws not yet initialized!");
-        return false;
-    }
+    if (!g_context) { JAWS_FATAL1("jaws not yet initialized!"); }
     g_context.reset();
-    return true;
+}
+
+
+InitGuard::InitGuard(int argc, char **argv)
+{
+    JAWS_ASSUME(jaws::init(argc, argv));
+}
+
+
+InitGuard::~InitGuard()
+{
+    jaws::destroy();
 }
 
 
