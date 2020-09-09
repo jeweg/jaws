@@ -141,6 +141,7 @@ set(src_vulkan
     include/jaws/vulkan/extension.hpp
     include/jaws/vulkan/buffer.hpp
     include/jaws/vulkan/image.hpp
+    include/jaws/vulkan/framebuffer.hpp
     #include/jaws/vulkan/sediment.hpp
     src/vulkan/context.cpp
     src/vulkan/window_context.cpp
@@ -149,6 +150,8 @@ set(src_vulkan
     src/vulkan/vulkan.cpp
     src/vulkan/to_string.cpp
     src/vulkan/to_string.hpp
+    src/vulkan/framebuffer_cache.hpp
+    src/vulkan/framebuffer_cache.cpp
     src/vulkan/shader_system.cpp
     src/vulkan/extension.cpp
     src/vulkan/buffer.cpp
