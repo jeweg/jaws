@@ -10,6 +10,14 @@
 
 namespace jaws::vulkan {
 
+struct ShaderResource : public jaws::util::RefCounted<ShaderResource>
+{
+    VkShaderModule shader_module = VK_NULL_HANDLE;
+    ShaderSystem *shader_system = nullptr;
+
+    void on_all_references_dropped() override;
+};
+
 struct ShaderCreateInfo
 {
     jaws::vfs::Path main_source_file;
@@ -58,6 +66,8 @@ class Shader : public jaws::util::RefCountedHandle<struct ShaderResource>
 {
 public:
     using RefCountedHandle::RefCountedHandle;
+
+    VkShaderModule vk_handle() const { return _resource_ptr->shader_module; }
 
 private:
     friend class ShaderSystem;
