@@ -126,6 +126,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         // If the surface size is defined, the swap chain size must match
         extent = surfaceCapabilities.currentExtent;
     }
+    _current_extent = extent;
 
     //-------------------------------------------------------------------------
     // Present mode
@@ -239,7 +240,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         swapchain_ci.queueFamilyIndexCount = static_cast<uint32_t>(queue_family_indices.size());
         swapchain_ci.pQueueFamilyIndices = queue_family_indices.data();
     }
-    result = vkCreateSwapchainKHR(_device->get_device(), &swapchain_ci, nullptr, &_swapchain);
+    result = vkCreateSwapchainKHR(_device->vk_handle(), &swapchain_ci, nullptr, &_swapchain);
     JAWS_VK_HANDLE_FATAL(result);
     logger.info("swapchain: {}", (void *)_swapchain);
 
@@ -250,11 +251,11 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
     // but that's not a given. hashing could probably be used to solve this.
 
     std::vector<VkImage> swapchain_images =
-        enumerated<VkImage>(vkGetSwapchainImagesKHR, nullptr, _device->get_device(), _swapchain);
+        enumerated<VkImage>(vkGetSwapchainImagesKHR, nullptr, _device->vk_handle(), _swapchain);
     logger.info("retrieved {} swapchain images", swapchain_images.size());
 
     //-------------------------------------------------------------------------
-    // Create image views for the swap chain images so that we can eventually render into them.
+    // Create image views for the swap chain images
 
     _swapchain_image_views.resize(swapchain_images.size());
     for (size_t i = 0; i < swapchain_images.size(); ++i) {
@@ -271,9 +272,42 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         ci.subresourceRange = subresource_range;
         ci.format = _surface_format.surfaceFormat.format;
 
-        result = vkCreateImageView(_device->get_device(), &ci, nullptr, &_swapchain_image_views[i]);
+        result = vkCreateImageView(_device->vk_handle(), &ci, nullptr, &_swapchain_image_views[i]);
         JAWS_VK_HANDLE_FATAL(result);
     }
+
+    /*
+    //-------------------------------------------------------------------------
+    // Create framebuffers for the swap chain images
+
+    _swapchain_framebuffers.resize(_swapchain_image_views.size());
+    for (size_t i = 0; i < _swapchain_image_views.size(); ++i) {
+        VkFramebufferCreateInfo ci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+        ci.width = extent.width;
+        ci.height = extent.height;
+        ci.layers = 1;
+        ci.attachmentCount = 1;
+        ci.pAttachments = &_swapchain_image_views[i];
+        ci.renderPass =
+
+            VkImageSubresourceRange subresource_range = {};
+        subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource_range.baseMipLevel = 0;
+        subresource_range.levelCount = 1;
+        subresource_range.baseArrayLayer = 0;
+        subresource_range.layerCount = 1;
+
+        VkImageViewCreateInfo ci = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        ci.image = swapchain_images[i];
+        ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ci.subresourceRange = subresource_range;
+        ci.format = _surface_format.surfaceFormat.format;
+
+        result = vkCreateImageView(_device->vk_handle(), &ci, nullptr, &_swapchain_image_views[i]);
+        JAWS_VK_HANDLE_FATAL(result);
+    }
+
+    */
 
     //-------------------------------------------------------------------------
     // Create depth buffer
@@ -326,9 +360,15 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         view_ci.subresourceRange = subresource_range;
         view_ci.format = DEPTH_FORMAT;
-        result = vkCreateImageView(_device->get_device(), &view_ci, nullptr, &_depth_view);
+        result = vkCreateImageView(_device->vk_handle(), &view_ci, nullptr, &_depth_view);
         JAWS_VK_HANDLE_FATAL(result);
     }
 }
+
+VkFormat WindowContext::get_surface_format() const
+{
+    return _surface_format.surfaceFormat.format;
+}
+
 
 }

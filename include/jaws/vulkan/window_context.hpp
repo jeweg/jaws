@@ -47,11 +47,17 @@ public:
     void create(Device *device, const CreateInfo & = jaws::util::make_default<CreateInfo>());
     void destroy();
 
+    VkFormat get_surface_format() const;
+    VkExtent2D get_extent() const { return _current_extent; }
+    uint32_t get_width() const { return _current_extent.width; }
+    uint32_t get_height() const { return _current_extent.height; }
+
 private:
 public: // remove later on
     void create_swap_chain(uint32_t width, uint32_t height);
 
 private:
+public: // remove later on
     Device *_device = nullptr;
     VkSurfaceKHR _surface;
     bool _enable_vsync;
@@ -65,12 +71,10 @@ private:
     VkSwapchainKHR _swapchain;
     std::vector<VkImageView> _swapchain_image_views;
 
+    VkExtent2D _current_extent;
+
     ImagePool::Id _depth_image;
     VkImageView _depth_view;
-
-    // The idea is to generate a hash of the params and save that here.
-    // check it to test whether to recreate the swap chain.
-    size_t swapchain_parameter_hash = 0;
 };
 
 }
