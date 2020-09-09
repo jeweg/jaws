@@ -5,12 +5,15 @@
 #include "jaws/vulkan/vulkan.hpp"
 #include "jaws/vulkan/buffer.hpp"
 #include "jaws/vulkan/image.hpp"
+#include "jaws/vulkan/framebuffer.hpp"
 #include "jaws/vulkan/extension.hpp"
 #include "jaws/util/misc.hpp"
 #include "jaws/util/hashing.hpp"
 #include "jaws/util/ref_ptr.hpp"
 #include "jaws/util/lru_cache.hpp"
 #include "jaws/util/pool.hpp"
+
+#include <vector>
 
 namespace jaws::vulkan {
 
@@ -40,7 +43,7 @@ public:
         }
     };
 
-    Device() = default;
+    Device();
     Device(const Device &) = delete;
     Device &operator=(const Device &) = delete;
     ~Device();
@@ -53,7 +56,7 @@ public:
     VkInstance get_instance() const { return _vk_instance; }
 
     Context *get_context() const { return _context; }
-    VkDevice get_device() const { return _vk_device; }
+    VkDevice vk_handle() const { return _vk_device; }
 
     VkPhysicalDevice get_physical_device(uint32_t index = 0) const;
 
@@ -72,7 +75,7 @@ public:
 
     Shader get_shader(const ShaderCreateInfo &);
 
-    const VolkDeviceTable &vk() const;
+    const VolkDeviceTable &vk_funcs() const;
 
     const ExtensionList &get_extensions() const;
     // Sediment* get_sediment() { return _sediment.get(); }
@@ -91,19 +94,19 @@ public:
     ImagePool::Id create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage);
     Image *get_image(ImagePool::Id);
 
-    //----------------------------------------------------------------
-
-private:
-    friend class Buffer;
-    friend class Image;
+    void *map_buffer(BufferPool::Id);
+    void unmap_buffer(BufferPool::Id);
 
     VmaAllocator get_vma_allocator() const { return _vma_allocator; }
+
+    VkFramebuffer get_framebuffer(const FramebufferCreateInfo &);
+
 
 private:
     friend Context;
     Context *_context = nullptr;
 
-    VkInstance _vk_instance;
+    VkInstance _vk_instance = VK_NULL_HANDLE;
     VkPhysicalDeviceGroupProperties _gpu_group;
     VkDevice _vk_device = VK_NULL_HANDLE;
 
@@ -130,6 +133,8 @@ private:
 
     BufferPool _buffer_pool;
     ImagePool _image_pool;
+
+    std::unique_ptr<FramebufferCache> _framebuffer_cache;
 };
 
 
@@ -166,7 +171,7 @@ inline const Device::QueueInfo &Device::get_queue_info(Queue q) const
 }
 
 
-inline const VolkDeviceTable &Device::vk() const
+inline const VolkDeviceTable &Device::vk_funcs() const
 {
     return _f;
 };

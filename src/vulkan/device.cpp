@@ -4,8 +4,11 @@
 #include "jaws/util/enumerate_range.hpp"
 #include "jaws/vulkan/shader_system.hpp"
 #include "jaws/vulkan/vulkan.hpp"
+#include "framebuffer_cache.hpp"
 
 namespace jaws::vulkan {
+
+Device::Device() = default;
 
 Device::~Device()
 {
@@ -22,13 +25,6 @@ void Device::create(Context *context, const CreateInfo &ci)
 
     _context = context;
     _vk_instance = context->get_instance();
-
-    //=========================================================================
-
-    /*
-    _buffer_pool = _context->create_buffer_pool();
-    _image_pool = _context->create_image_pool();
-    */
 
     //=========================================================================
     // Physical device group
@@ -437,6 +433,34 @@ Buffer *Device::get_buffer(BufferPool::Id id)
 Image *Device::get_image(ImagePool::Id id)
 {
     return _image_pool.lookup(id);
+}
+
+
+void *Device::map_buffer(BufferPool::Id id)
+{
+    Buffer *b = get_buffer(id);
+    JAWS_ASSUME(b);
+    void *ptr = nullptr;
+    vmaMapMemory(_vma_allocator, b->vma_allocation, &ptr);
+    return ptr;
+}
+
+
+void Device::unmap_buffer(BufferPool::Id id)
+{
+    Buffer *b = get_buffer(id);
+    JAWS_ASSUME(b);
+    vmaUnmapMemory(_vma_allocator, b->vma_allocation);
+}
+
+
+VkFramebuffer Device::get_framebuffer(const FramebufferCreateInfo &ci)
+{
+    if (!_framebuffer_cache) {
+        _framebuffer_cache = std::make_unique<FramebufferCache>();
+        _framebuffer_cache->create(this);
+    }
+    return _framebuffer_cache->get_framebuffer(ci);
 }
 
 }
