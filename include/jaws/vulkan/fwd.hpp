@@ -10,6 +10,7 @@ class WindowContext;
 class ShaderSystem;
 struct ShaderCreateInfo;
 class Shader;
+class FramebufferCache;
 
 class Buffer;
 class Image;
