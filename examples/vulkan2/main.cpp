@@ -141,6 +141,7 @@ int main(int argc, char **argv)
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkRenderPass render_pass = VK_NULL_HANDLE;
+        VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
         {
             //----------------------------------------------------------------------
             // Descriptor set layout and pipeline layout
@@ -153,7 +154,6 @@ int main(int argc, char **argv)
                 JAWS_VK_HANDLE_FATAL(result);
             }
 
-            VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
             {
                 VkPipelineLayoutCreateInfo ci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
                 ci.setLayoutCount = 1;
@@ -441,21 +441,21 @@ int main(int argc, char **argv)
                     switch (i) {
                     default:
                     case 0:
-                        clear_value.color.float32[0] = 1;
-                        clear_value.color.float32[1] = 0;
+                        clear_value.color.float32[0] = 0.9;
+                        clear_value.color.float32[1] = 0.5;
                         clear_value.color.float32[2] = 0;
                         clear_value.color.float32[3] = 1;
                         break;
                     case 1:
-                        clear_value.color.float32[0] = 0;
-                        clear_value.color.float32[1] = 1;
+                        clear_value.color.float32[0] = 0.6;
+                        clear_value.color.float32[1] = 0.5;
                         clear_value.color.float32[2] = 0;
                         clear_value.color.float32[3] = 1;
                         break;
                     case 2:
-                        clear_value.color.float32[0] = 0;
-                        clear_value.color.float32[1] = 0;
-                        clear_value.color.float32[2] = 1;
+                        clear_value.color.float32[0] = 0.3;
+                        clear_value.color.float32[1] = 0.5;
+                        clear_value.color.float32[2] = 0;
                         clear_value.color.float32[3] = 1;
                         break;
                     }
@@ -480,6 +480,10 @@ int main(int argc, char **argv)
                 }
 
                 vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+                glm::vec2 offset(0.5, 0);
+                vkCmdPushConstants(
+                    cb, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec2), glm::value_ptr(offset));
 
                 vkCmdDraw(cb, 3, 1, 0, 0);
 
