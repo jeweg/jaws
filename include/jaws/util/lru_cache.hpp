@@ -44,13 +44,36 @@ private:
     using ListIter = typename std::list<Element>::iterator;
     mutable absl::flat_hash_map<Key, ListIter, Hash, Eq> _hash_map;
 
+    struct AbstractDeleter
+    {
+        virtual ~AbstractDeleter() = default;
+        virtual void del(const Key &, Value &) = 0;
+    };
+    template <typename Deleter>
+    struct ConcreteDeleter final : AbstractDeleter
+    {
+        Deleter deleter;
+        ConcreteDeleter(Deleter deleter) : deleter(deleter) {}
+        void del(const Key &key, Value &value) override { deleter(key, value); }
+    };
+    // Type-erased deleter
+    AbstractDeleter *_deleter = nullptr;
 
 public:
     explicit LruCache(int max_elem_count = -1, int max_age = -1) : _max_elem_count(max_elem_count), _max_age(max_age) {}
 
-    void tick_clock()
+    template <typename Deleter>
+    explicit LruCache(Deleter deleter, int max_elem_count = -1, int max_age = -1) :
+        _deleter(new ConcreteDeleter(deleter)), _max_elem_count(max_elem_count), _max_age(max_age)
+    {}
+
+    ~LruCache() { delete _deleter; }
+
+
+    void advance_clock()
     {
-        // Even *if* this overflows, this shouldn't do much harm.
+        // Yes, this may eventually overflow. However, it being unsigned that is not undefined behaviour,
+        // and also it cannot do much harm here. When purging, we detect likely overflow and correct for it.
         ++_clock;
         purge(_max_elem_count, _max_age);
     }
@@ -92,7 +115,7 @@ public:
     Value *lookup(const Key &key) { return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup(key)); }
 
     // Does lookup. If it found a value, it calls the specified functor
-    // with signature (const Key&, const Value*). If the functor returns true,
+    // with signature (const Key&, Value&). If the functor returns true,
     // the element is erased from the cache directly and this function
     // returns nullptr. It's meant for cases where we have extra information
     // in the elements to decide if a cached value is stale.
@@ -100,11 +123,12 @@ public:
     // multiple lookups whereas with this we hold the internal iterators already
     // in hand.
     template <typename Func>
-    const Value *lookup_unless(const Key &key, Func unless_func) const
+    const Value *lookup_or_remove(const Key &key, Func remove_classifier_func) const
     {
         auto iter = _hash_map.find(key);
         if (iter != _hash_map.end()) {
-            if (unless_func(key, &iter->second->value)) {
+            if (remove_classifier_func(key, iter->second->value)) {
+                if (_deleter) { _deleter->del(iter->second->key, iter->second->value); }
                 _lru_list.erase(iter->second);
                 _hash_map.erase(iter);
                 return nullptr;
@@ -119,16 +143,17 @@ public:
     }
 
     template <typename Func>
-    Value *lookup_unless(const Key &key, Func unless_func)
+    Value *lookup_or_remove(const Key &key, Func unless_func)
     {
-        return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup_unless<Func>(key, unless_func));
+        return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup_or_remove<Func>(key, unless_func));
     }
 
 
-    bool erase(const Key &key)
+    bool remove(const Key &key)
     {
         auto iter = _hash_map.find(key);
         if (iter == _hash_map.end()) { return false; }
+        if (_deleter) { _deleter->del(key, iter->second.value); }
         _lru_list.erase(iter->second);
         _hash_map.erase(iter);
     }
@@ -167,6 +192,7 @@ public:
                 if (age > max_age) { erase_this = true; }
             }
             if (erase_this) {
+                if (_deleter) { _deleter->del(erase_iter->key, erase_iter->value); }
                 _hash_map.erase(erase_iter->key);
                 --size;
                 ++erase_iter;
@@ -179,6 +205,11 @@ public:
 
     void clear()
     {
+        if (_deleter) {
+            for (auto iter = _lru_list.begin(), end_iter = _lru_list.end(); iter != end_iter; ++iter) {
+                _deleter->del(iter->key, iter->value);
+            }
+        }
         _lru_list.clear();
         _hash_map.clear();
     }
@@ -187,38 +218,6 @@ public:
     size_t size() const { return _hash_map.size(); }
     int get_size() const { return static_cast<int>(size()); }
 };
-
-
-/*
-template <typename Value>
-using PrehashedLruCache = LruCache<size_t, Value, jaws::util::Prehashed, jaws::util::Prehashed>;
-
-
-// Adapter for key convenience -- key is not stored, though.
-template <typename Key, typename Value>
-class NoKeysStoredLruCache : public LruCache<size_t, Value, jaws::util::Prehashed, jaws::util::Prehashed>
-{
-    using BaseClass = LruCache<size_t, Value, jaws::util::Prehashed, jaws::util::Prehashed>;
-
-public:
-    const Value *lookup_keyed(const Key &key) const
-    {
-        size_t hash_value = absl::Hash<Key>{}(key);
-        return BaseClass::lookup(hash_value);
-    };
-    Value *lookup_keyed(const Key &key)
-    {
-        return const_cast<Value *>(const_cast<const NoKeysStoredLruCache *>(this)->lookup_keyed(key));
-    }
-
-    template <typename K, typename V>
-    void insert_keyed(K &&key, V &&value)
-    {
-        size_t hash_value = absl::Hash<Key>{}(std::forward(key));
-        BaseClass::insert(hash_value, std::forward(value));
-    }
-};
-*/
 
 
 }; // namespace jaws::util
