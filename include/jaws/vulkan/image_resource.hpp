@@ -20,13 +20,6 @@ private:
     friend class jaws::util::detail::RefCountedAccessor;
     friend class jaws::util::Pool<ImageResource>;
 
-    void on_all_references_dropped() override
-    {
-        int foo1 = 3;
-        int foo2 = 3;
-        int foo3 = 3;
-    }
-
     ImageResource(Device *device, VkImage, VmaAllocation);
 
     Device *_device = nullptr;
