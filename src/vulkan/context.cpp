@@ -185,17 +185,6 @@ void Context::create(const Context::CreateInfo &ci)
                 VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
                 &data);
         }
-
-        //=========================================================================
-        // Enumerate physical devices
-
-        {
-            for (auto pd : enumerated<VkPhysicalDevice>(vkEnumeratePhysicalDevices, {}, _vk_instance)) {
-                VkPhysicalDeviceProperties props;
-                vkGetPhysicalDeviceProperties(pd, &props);
-            }
-        }
-        // logger.info("physical device: {}", (void *) _physical_device);
     }
 }
 
