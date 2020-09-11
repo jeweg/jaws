@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // Things most _implementation_files_ will find they
 // want to include anyway, so here's a convenient way.
