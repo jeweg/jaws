@@ -90,13 +90,13 @@ T make_default()
 };
 
 
-struct MovableOnly
+struct NonCopyable
 {
-    MovableOnly() noexcept = default;
-    MovableOnly(MovableOnly &&) noexcept = default;
-    MovableOnly &operator=(MovableOnly &&) noexcept = default;
-    MovableOnly(const MovableOnly &) = delete;
-    MovableOnly &operator=(const MovableOnly &) = delete;
+    NonCopyable() noexcept = default;
+    NonCopyable(NonCopyable &&) noexcept = default;
+    NonCopyable &operator=(NonCopyable &&) noexcept = default;
+    NonCopyable(const NonCopyable &) = delete;
+    NonCopyable &operator=(const NonCopyable &) = delete;
 };
 
 
