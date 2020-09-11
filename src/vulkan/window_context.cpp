@@ -92,7 +92,7 @@ void WindowContext::create(Device *device, const CreateInfo &ci)
 void WindowContext::destroy()
 {
     if (_surface) {
-        vkDestroySurfaceKHR(_device->get_instance(), _surface, nullptr);
+        vkDestroySurfaceKHR(_device->get_context()->get_instance(), _surface, nullptr);
         _surface = VK_NULL_HANDLE;
     }
 }
@@ -346,8 +346,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         ci.samples = VK_SAMPLE_COUNT_1_BIT;
         ci.tiling = tiling;
         ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
-        _depth_image = _device->create_image(ci, VMA_MEMORY_USAGE_GPU_ONLY);
+        _depth_image = _device->create(ci, VMA_MEMORY_USAGE_GPU_ONLY);
 
         VkImageSubresourceRange subresource_range = {};
         subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -356,7 +355,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         subresource_range.baseArrayLayer = 0;
         subresource_range.layerCount = 1;
         VkImageViewCreateInfo view_ci = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-        view_ci.image = _device->get_image(_depth_image)->handle;
+        view_ci.image = _depth_image->vk_handle();
         view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         view_ci.subresourceRange = subresource_range;
         view_ci.format = DEPTH_FORMAT;

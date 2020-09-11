@@ -2,7 +2,6 @@
 #include "jaws/core.hpp"
 #include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/vulkan.hpp"
-#include "jaws/vulkan/image.hpp"
 #include "jaws/util/misc.hpp"
 
 namespace jaws::vulkan {
@@ -73,7 +72,7 @@ public: // remove later on
 
     VkExtent2D _current_extent;
 
-    ImagePool::Id _depth_image;
+    Image _depth_image;
     VkImageView _depth_view;
 };
 
