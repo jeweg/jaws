@@ -347,6 +347,7 @@ void WindowContext::create_swap_chain(uint32_t width, uint32_t height)
         ci.tiling = tiling;
         ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         _depth_image = _device->create(ci, VMA_MEMORY_USAGE_GPU_ONLY);
+        JAWS_ASSUME(_depth_image);
 
         VkImageSubresourceRange subresource_range = {};
         subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
