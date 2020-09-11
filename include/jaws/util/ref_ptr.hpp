@@ -105,7 +105,9 @@ protected:
 protected:
     ~RefCounted() noexcept = default;
 
-    virtual void on_all_references_dropped() {}
+    // Not virtual. We provide the default implementation, but calls to this
+    // are always done through the concrete subtype.
+    void on_all_references_dropped() {}
 
 private:
     FRIEND_TEST(ref_ptr_test, basic);

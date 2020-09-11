@@ -26,7 +26,7 @@ private:
 
     ShaderResource(Device *device, VkShaderModule vk_shader_module);
 
-    void on_all_references_dropped() override;
+    void on_all_references_dropped();
 
     Device *_device = nullptr;
     VkShaderModule _vk_shader_module = VK_NULL_HANDLE;
