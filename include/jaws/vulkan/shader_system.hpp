@@ -4,8 +4,8 @@
 #include "jaws/vfs/path.hpp"
 #include "jaws/vulkan/fwd.hpp"
 #include "jaws/vulkan/context.hpp"
-#include "jaws/vulkan/shader.hpp"
 #include "jaws/util/lru_cache.hpp"
+#include "jaws/vulkan/shader_resource.hpp"
 #include "jaws/util/misc.hpp"
 //#include "sediment.hpp"
 #include <tuple>
@@ -14,36 +14,57 @@
 
 namespace jaws::vulkan {
 
-class ShaderSystem final
+struct ShaderCreateInfo final
 {
-    /*
+    jaws::vfs::Path main_source_file;
+    std::vector<jaws::vfs::Path> include_paths;
+    std::vector<std::pair<std::string, std::string>> compile_definitions;
+    std::string entry_point_name = "main";
 
-    create_info (lists the file names and everything needed to resolve and interpret the contents, but NOT the file
-    contents)
-        -> full info (create_info + file fingerprints)
-            -> shader resource, relevant reflection output
+    ShaderCreateInfo &set_main_source_file(jaws::vfs::Path v)
+    {
+        main_source_file = std::move(v);
+        return *this;
+    }
+    ShaderCreateInfo &set_include_paths(std::vector<jaws::vfs::Path> v)
+    {
+        include_paths = std::move(v);
+        return *this;
+    }
+    ShaderCreateInfo &set_compile_definitions(std::vector<std::pair<std::string, std::string>> v)
+    {
+        compile_definitions = std::move(v);
+        return *this;
+    }
+    ShaderCreateInfo &set_entry_point_name(std::string v)
+    {
+        entry_point_name = std::move(v);
+        return *this;
+    }
+
+    friend bool operator==(const ShaderCreateInfo &a, const ShaderCreateInfo &b)
+    {
+        return a.main_source_file == b.main_source_file && a.entry_point_name == b.entry_point_name
+               && a.include_paths == b.include_paths && a.compile_definitions == b.compile_definitions;
+    }
+
+    friend bool operator!=(const ShaderCreateInfo &a, const ShaderCreateInfo &b) { return !(a == b); }
+
+    template <typename H>
+    friend H AbslHashValue(H h, const ShaderCreateInfo &v)
+    {
+        return H::combine(std::move(h), v.main_source_file, v.include_paths, v.compile_definitions);
+    }
+};
 
 
-    */
-
-    /*
-2. The shader system can be instructed to compile a single shader (i.e. a pipeline's particular stage) by
-   specifying a vfs name and a shader source file.
-   The type of shader can be specified or deduced from an extension (if any) or set with the code pragma. *preferably in
-that order* It will compile the specified source files, resolving include files to possibly yield more files using the
-originally specified vfs. It will store a list of file dependencies for this shader. Optionally and if supported, it
-will set up automatic observation of all addressed files through the vfs interface. *triggering a refresh for a shader
-module is always possibly, the file observation just adds an automatic path* The subsystem owns the returned shader
-handles, and each handle has a hash value attached through which we will detect necessary pipeline rebuilds.
-     */
-
+class ShaderSystem final : jaws::util::NonCopyable
+{
 public:
-    using FileWithFingerprint = std::tuple<jaws::vfs::Path, size_t>;
-
     ShaderSystem();
     ~ShaderSystem();
-    ShaderSystem(const ShaderSystem &) = delete;
-    ShaderSystem &operator=(const ShaderSystem &) = delete;
+    ShaderSystem(ShaderSystem &&) = default;
+    ShaderSystem &operator=(ShaderSystem &&) = default;
 
     void create(Device *);
     void destroy();
@@ -51,23 +72,9 @@ public:
     Shader get_shader(const ShaderCreateInfo &);
 
 private:
-    friend struct ShaderResource;
-    void shader_got_unreferenced(ShaderResource *)
-    {
-        // schedule for actual deletion of vulkan resources. not within a frame, though!
-    }
-
-private:
     Device *_device = nullptr;
     VkValidationCacheEXT _validation_cache = VK_NULL_HANDLE;
-
-    struct CachedShaderInformation : util::MovableOnly
-    {
-        std::vector<FileWithFingerprint> involved_files;
-        ShaderResource shader_resource;
-    };
-
-    util::LruCache<ShaderCreateInfo, CachedShaderInformation> _shader_cache;
+    util::LruCache<ShaderCreateInfo, ShaderResource> _shader_cache;
 };
 
 }

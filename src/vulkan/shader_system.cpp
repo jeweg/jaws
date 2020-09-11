@@ -1,11 +1,10 @@
 #include "pch.hpp"
-#include "jaws/jaws.hpp"
+#include "jaws/vulkan/shader_system.hpp"
 #include "jaws/assume.hpp"
 #include "jaws/vfs/vfs.hpp"
 #include "jaws/vulkan/vulkan.hpp"
 #include "jaws/vulkan/device.hpp"
-#include "jaws/vulkan/shader.hpp"
-#include "jaws/vulkan/shader_system.hpp"
+#include "jaws/vulkan/shader_resource.hpp"
 #include "jaws/util/hashing.hpp"
 #include "jaws/util/misc.hpp"
 
@@ -53,37 +52,9 @@ static shaderc_shader_kind shader_kind_from_ext(std::string_view lc_ext)
 
 class ShaderSystemIncludeHandler : public shaderc::CompileOptions::IncluderInterface
 {
-public:
-    /*
-// Source text inclusion via #include is supported with a pair of callbacks
-// to an "includer" on the client side.  The first callback processes an
-// inclusion request, and returns an include result.  The includer owns
-// the contents of the result, and those contents must remain valid until the
-// second callback is invoked to release the result.  Both callbacks take a
-// user_data argument to specify the client context.
-// To return an error, set the source_name to an empty string and put your
-// error message in content.
-
-// An include result.
-    typedef struct shaderc_include_result {
-        // The name of the source file.  The name should be fully resolved
-        // in the sense that it should be a unique name in the context of the
-        // includer.  For example, if the includer maps source names to files in
-        // a filesystem, then this name should be the absolute path of the file.
-        // For a failed inclusion, this string is empty.
-        const char* source_name;
-        size_t source_name_length;
-        // The text contents of the source file in the normal case.
-        // For a failed inclusion, this contains the error message.
-        const char* content;
-        size_t content_length;
-        // User data to be passed along with this request.
-        void* user_data;   } shaderc_include_result;
-     */
-
 private:
     const jaws::vfs::Vfs &_vfs;
-    std::vector<ShaderSystem::FileWithFingerprint> *_out_included_files;
+    std::vector<FileWithFingerprint> *_out_included_files;
 
     struct FullResult
     {
@@ -103,7 +74,7 @@ public:
     ShaderSystemIncludeHandler(
         const jaws::vfs::Vfs &vfs,
         const vfs::Path &main_source_file,
-        std::vector<ShaderSystem::FileWithFingerprint> *out_included_files) :
+        std::vector<FileWithFingerprint> *out_included_files) :
         _vfs(vfs), _out_included_files(out_included_files)
     {}
 
@@ -145,7 +116,7 @@ public:
             auto [iter, ok] = _alive_results.insert(std::make_pair(this_result_id, std::move(full_res)));
             JAWS_ASSUME(ok);
 
-            _out_included_files->push_back(ShaderSystem::FileWithFingerprint(try_path, fingerprint));
+            _out_included_files->push_back(FileWithFingerprint(try_path, fingerprint));
             return returned;
         }
 
@@ -164,167 +135,6 @@ public:
     }
 };
 
-
-#if 0
-class ShaderSystemImpl
-{
-    jaws::Instance* _instance = nullptr;
-
-    struct ShaderCacheValue
-    {
-        std::vector<std::string> involved_files;
-        std::vector<jaws::util::file_observing::State> involved_file_states;
-        std::vector<uint32_t> spirv_code;
-    };
-    mutable jaws::util::HashedCache<ShaderCacheValue, std::string, std::string> _shader_cache;
-
-public:
-    void create(jaws::Instance* instance)
-    {
-        JAWS_ASSUME(instance != nullptr);
-        _instance = instance;
-    }
-
-    void destroy() {}
-
-    Shader* get_shader(const std::string& root_source_file) const
-    {
-        auto& logger = jaws::GetLogger(jaws::Category::Vulkan);
-        namespace fo = jaws::util::file_observing;
-
-        //=========================================================================
-
-#    if 0
-
-		//=========================================================================
-		// Transformation root_source_file --> spirv + involved files
-		{
-			ShaderCacheValue* val = _shader_cache.lookup(vfs_name, root_source_file);
-			bool cached_is_still_fresh = false;
-			if (val) {
-				// Now we know all involved files. Let's see if any of them changed.
-				bool something_changed = false;
-				for (size_t i = 0; i < val->involved_files.size(); ++i) {
-					if (fo::get_file_event(val->involved_files[i], val->involved_file_states[i]) != fo::Event::None) {
-						something_changed = true;
-						// Don't break, we want updates of all the file states.
-					}
-				}
-				cached_is_still_fresh = !something_changed;
-			}
-			if (!cached_is_still_fresh) {
-
-				// Compile and collect involved source files.
-
-				auto* vfs = _instance->get_vfs(vfs_name);
-				if (!vfs) { return nullptr; }
-				if (!vfs->is_file(root_source_file)) { return nullptr; }
-				std::string code = vfs->get_file_contents(root_source_file);
-				if (code.empty()) {
-					return nullptr;
-				}
-
-				shaderc::Compiler compiler;
-				shaderc::CompileOptions compile_options;
-
-				std::string lower_extension = jaws::util::to_lower(jaws::vfs::Vfs::extension(root_source_file));
-				shaderc_shader_kind shader_kind = shader_kind_from_ext(lower_extension);
-
-				std::vector<std::string> involved_files = { root_source_file };
-				compile_options.SetIncluder(std::make_unique<ShaderSystemIncludeHandler>(vfs_name, involved_files));
-				auto compile_result = compiler.CompileGlslToSpv(code.c_str(), code.size(), shader_kind, root_source_file.c_str(), compile_options);
-				if (compile_result.GetCompilationStatus() != shaderc_compilation_status_success) {
-					logger.error(
-						"Error compiling shader ({}): {}",
-						detail::to_string(compile_result.GetCompilationStatus()),
-						compile_result.GetErrorMessage());
-					JAWS_FATAL1("Shader compilation failed");
-				} else {
-					logger.info(
-						"Successfully compiled shader ({} errors, {} warnings)",
-						compile_result.GetNumErrors(),
-						compile_result.GetNumWarnings());
-				}
-
-				ShaderCacheValue cached;
-				cached.vfs_name = vfs_name;
-				cached.involved_files = std::move(involved_files);
-				cached.spirv_code.assign(compile_result.cbegin(), compile_result.cend());
-				_shader_cache.insert(std::move(cached), vfs_name, root_source_file);
-
-			}
-			return nullptr;
-
-		}
-        //-------------<
-
-        _compile_options.SetIncluder(std::make_unique<ShaderSystemIncludeHandler>(*this));
-
-        auto *vfs = _instance->get_vfs(vfs_name);
-        if (!vfs) { return false; }
-        if (!vfs->is_file(path)) { return false; }
-
-        std::string code = vfs->get_file_contents(path);
-
-        // Why I'm doing this? Because the interface forces me to pass something, and the only thing I could
-        // always pass is infer_from_source, but I don't want to force the pragma everywhere.
-        // Where it makes sense, I'm keeping this compatible with
-        // https://github.com/google/shaderc/tree/master/glslc#311-shader-stage-specification
-        shaderc_shader_kind shader_kind = shaderc_glsl_infer_from_source;
-        std::string extension = ".frag"; //path.extension().string();
-        std::string lower_extension = extension;
-        std::transform(lower_extension.begin(), lower_extension.end(), lower_extension.begin(), [](unsigned char c) {
-            return std::tolower(c);
-        });
-        if (lower_extension == ".frag") {
-            shader_kind = shaderc_glsl_default_fragment_shader;
-        } else if (lower_extension == ".vert") {
-            shader_kind = shaderc_glsl_default_vertex_shader;
-        } else if (lower_extension == ".tesc") {
-            shader_kind = shaderc_glsl_default_tess_control_shader;
-        } else if (lower_extension == ".tese") {
-            shader_kind = shaderc_glsl_default_tess_evaluation_shader;
-        } else if (lower_extension == ".geom") {
-            shader_kind = shaderc_glsl_default_geometry_shader;
-        } else if (lower_extension == ".comp") {
-            shader_kind = shaderc_glsl_default_compute_shader;
-        }
-
-        auto compile_result = _compiler.CompileGlslToSpv(
-            code.c_str(),
-            code.size(),
-            shader_kind,
-            path.c_str(),
-            _compile_options);
-
-        shaderc_compilation_status status = compile_result.GetCompilationStatus();
-        if (status != shaderc_compilation_status_success) {
-            logger->error(
-                "Shader compilation error ({}): {}",
-                jaws::vulkan::ToString(status),
-                compile_result.GetErrorMessage());
-            JAWS_FATAL1("Shader compilation failed");
-        } else {
-            logger->info(
-                "Successfully compiled shader ({} errors, {} warnings)",
-                compile_result.GetNumErrors(),
-                compile_result.GetNumWarnings());
-        }
-        return device->createShaderModuleUnique(
-            vk::ShaderModuleCreateInfo{}
-                .setPCode(compile_result.cbegin())
-                .setCodeSize(sizeof(uint32_t) * std::distance(compile_result.cbegin(), compile_result.cend())));
-#    endif
-    }
-};
-#endif
-
-}
-
-
-void ShaderResource::on_all_references_dropped()
-{
-    shader_system->shader_got_unreferenced(this);
 }
 
 ShaderSystem::ShaderSystem() = default;
@@ -347,7 +157,6 @@ void ShaderSystem::destroy()
         if (_device->supports_validation_cache()) {
             vkDestroyValidationCacheEXT(_device->vk_handle(), _validation_cache, nullptr);
         }
-        //_full_info_cache.clear();
         _device = nullptr;
     }
 }
@@ -366,6 +175,7 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
     //-------------------------------------------------------------------------
     // Cache lookup
 
+    /*
     CachedShaderInformation *cached_shader_info =
         _shader_cache.lookup_or_remove(shader_ci, [](const ShaderCreateInfo &ci, const CachedShaderInformation &info) {
             // Check if the file fingerprints are still up-to-date.
@@ -380,8 +190,9 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
             }
             return false;
         });
+    */
 
-    if (cached_shader_info) { return Shader(&cached_shader_info->shader_resource); }
+    // TODO: I disabeled the caching for the moment.
 
     //-------------------------------------------------------------------------
     // Load and compile to SPIR-V
@@ -434,9 +245,7 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
 
     //-------------------------------------------------------------------------
     // Reflect on the generated SPIR-V
-
-    // std::vector<uint32_t> spirv_code;
-    // spirv_code.assign(compile_result.cbegin(), compile_result.cend());
+    // We will use this to infer descriptor set layouts.
 
     using CompiledElem = shaderc::SpvCompilationResult::element_type;
     // The # of elements (uint32_t), not bytes!
@@ -455,13 +264,12 @@ Shader ShaderSystem::get_shader(const ShaderCreateInfo &shader_ci)
     mod_ci.pCode = compile_result.cbegin();
     if (_device->supports_validation_cache()) { mod_ci.pNext = &_validation_cache; }
 
-    // Insert, then lookup to get a stable pointer to the value.
-    _shader_cache.insert(shader_ci, CachedShaderInformation{});
-    cached_shader_info = _shader_cache.lookup(shader_ci);
 
-    vkCreateShaderModule(_device->vk_handle(), &mod_ci, nullptr, &(cached_shader_info->shader_resource.shader_module));
+    VkShaderModule vk_shader_module = VK_NULL_HANDLE;
+    VkResult result = vkCreateShaderModule(_device->vk_handle(), &mod_ci, nullptr, &vk_shader_module);
+    JAWS_VK_HANDLE_FATAL(result);
 
-    return Shader(&(cached_shader_info->shader_resource));
+    return Shader(_shader_cache.emplace(shader_ci, _device, vk_shader_module));
 }
 
 
