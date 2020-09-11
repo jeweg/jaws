@@ -1,5 +1,8 @@
 #pragma once
 
+#include "jaws/assume.hpp"
+#include "jaws/util/misc.hpp"
+
 #include <vector>
 #include <memory>
 
@@ -9,10 +12,13 @@ template <typename ElemType>
 class Pool
 {
 public:
+    ElemType *insert(ElemType &&);
+    ElemType *insert(const ElemType &);
+
     template <typename... Args>
     ElemType *emplace(Args &&... args);
 
-    void remove(ElemType *);
+    void free(ElemType *);
     void clear();
     size_t size() const { return _element_count; }
     bool empty() const { return _element_count == 0; }
@@ -22,6 +28,8 @@ private:
     {
         void operator()(ElemType *ptr) { ::operator delete(ptr); }
     };
+
+    ElemType *allocate();
 
     using FreeStack = std::vector<ElemType *>;
     FreeStack _free_stack;
@@ -33,13 +41,11 @@ private:
 
 
 template <typename ElemType>
-template <typename... Args>
-ElemType *Pool<ElemType>::emplace(Args &&... args)
+ElemType *Pool<ElemType>::allocate()
 {
     if (_free_stack.empty()) {
         // Grow the vector by 50% its current size
         const size_t num_added = empty() ? 32 : _element_count / 2;
-
         _memory_blocks.emplace_back(static_cast<ElemType *>(::operator new(sizeof(ElemType) * num_added)));
 
         // Add newly aquired slots to free list
@@ -50,15 +56,41 @@ ElemType *Pool<ElemType>::emplace(Args &&... args)
     }
     ElemType *result_ptr = _free_stack.back();
     _free_stack.pop_back();
-
-    new (result_ptr) ElemType(std::forward<Args>(args)...);
     ++_element_count;
     return result_ptr;
 }
 
 
 template <typename ElemType>
-void Pool<ElemType>::remove(ElemType *ptr)
+ElemType *Pool<ElemType>::insert(ElemType &&elem)
+{
+    ElemType *result_ptr = allocate();
+    new (result_ptr) ElemType(forward_to_move_or_copy<ElemType>(std::move(elem)));
+    return result_ptr;
+}
+
+
+template <typename ElemType>
+ElemType *Pool<ElemType>::insert(const ElemType &elem)
+{
+    ElemType *result_ptr = allocate();
+    new (result_ptr) ElemType(forward_to_move_or_copy<ElemType>(std::move(elem)));
+    return result_ptr;
+}
+
+
+template <typename ElemType>
+template <typename... Args>
+ElemType *Pool<ElemType>::emplace(Args &&... args)
+{
+    ElemType *result_ptr = allocate();
+    new (result_ptr) ElemType(std::forward<Args>(args)...);
+    return result_ptr;
+}
+
+
+template <typename ElemType>
+void Pool<ElemType>::free(ElemType *ptr)
 {
     ptr->~ElemType();
     _free_stack.push_back(ptr);
@@ -78,5 +110,4 @@ void Pool<ElemType>::clear()
     _memory_blocks.clear();
     _free_stack.clear();
 }
-
 }
