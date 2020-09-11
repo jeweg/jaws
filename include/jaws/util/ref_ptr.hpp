@@ -61,6 +61,30 @@ template <typename T>
 void swap(ref_ptr<T> &a, ref_ptr<T> &b) noexcept;
 
 
+namespace detail {
+
+class RefCountedAccessor
+{
+public:
+    template <typename RefCountedType>
+    static void remove_ref(RefCountedType *rc)
+    {
+        if (rc) {
+            const size_t now = rc->remove_ref();
+            if (now == 0) { rc->on_all_references_dropped(); }
+        }
+    }
+
+    template <typename RefCountedType>
+    static void add_ref(RefCountedType *rc)
+    {
+        if (rc) { rc->add_ref(); }
+    }
+};
+
+}
+
+
 template <typename Derived>
 class RefCounted
 {
@@ -68,7 +92,9 @@ public:
     RefCounted() noexcept = default;
 
 protected:
-    RefCounted(RefCounted &&other) : _ref_count(other._ref_count.load(std::memory_order_acquire)) {}
+    RefCounted(RefCounted &&other) noexcept : _ref_count(other._ref_count.load(std::memory_order_acquire)) {}
+
+    // This doesn't make sense to allow, I think.
     RefCounted &operator=(RefCounted &&other) = delete;
 
     RefCounted(const RefCounted &) = delete;
@@ -84,19 +110,25 @@ protected:
 private:
     FRIEND_TEST(ref_ptr_test, basic);
 
+    friend class detail::RefCountedAccessor;
+
     // Note: it's important to go through Derived and not RefCounted<Derived>.
     // We don't want to require virtual destructors or RTTI (dynamic_cast) for this.
     friend void ref_ptr_remove_ref(Derived *rc)
     {
+        detail::RefCountedAccessor::remove_ref<Derived>(rc);
+        /*
         if (rc) {
             const size_t now = rc->remove_ref();
             if (now == 0) { rc->on_all_references_dropped(); }
         }
+        */
     }
 
     friend void ref_ptr_add_ref(Derived *rc)
     {
-        if (rc) { rc->add_ref(); }
+        detail::RefCountedAccessor::add_ref<Derived>(rc);
+        // if (rc) { rc->add_ref(); }
     }
 
     size_t add_ref();
@@ -104,25 +136,6 @@ private:
     std::atomic_int_least32_t _ref_count = 0;
 };
 
-
-// TODO: embrace this to be a special case and use a custom deleter.
-// We don't want to have simple shared ownership for our resource objects like shaders.
-// That makes this more vulkan-subsystem-specific, though.
-
-template <typename ResourceType>
-class RefCountedHandle
-{
-public:
-    RefCountedHandle(std::nullptr_t) noexcept : _resource_ptr(nullptr) {}
-    RefCountedHandle &operator=(std::nullptr_t) { _resource_ptr = nullptr; }
-    operator bool() const noexcept { return !!_resource_ptr; }
-
-protected:
-    RefCountedHandle(ResourceType *r) noexcept : _resource_ptr(r) {}
-    ref_ptr<ResourceType> _resource_ptr;
-};
-
-
-}; // namespace jaws::util
+}
 
 #include "ref_ptr.inl"

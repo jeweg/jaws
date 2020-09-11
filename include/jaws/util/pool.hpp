@@ -1,126 +1,76 @@
 #pragma once
 
-#include "jaws/assume.hpp"
 #include <vector>
-#include <utility>
+#include <memory>
 
 namespace jaws::util {
 
-
-template <typename ElementType, typename NumericIdType = uint64_t, size_t generation_bits = 16, size_t index_bits = 32>
+template <typename ElemType>
 class Pool
 {
-    static_assert(std::is_integral_v<NumericIdType>, "!");
-    static_assert(64 >= 16 + 32, "!!!");
-    static_assert(sizeof(NumericIdType) * 8 >= generation_bits + index_bits, "!");
-    static_assert(index_bits > 0, "!");
-
 public:
-    // using Id = PoolId<NumericIdType, generation_bits, index_bits>;
-    struct Id
-    {
-        Id() noexcept = default;
-        Id(NumericIdType id) noexcept : _id(id) {}
-        Id(NumericIdType generation, NumericIdType index) noexcept : _id((generation << index_bits) | (index + 1)) {}
-
-        bool is_valid() const { return _id != 0; }
-
-        static constexpr NumericIdType GENERATION_MASK = (static_cast<NumericIdType>(1) << generation_bits) - 1;
-        static constexpr NumericIdType INDEX_MASK = (static_cast<NumericIdType>(1) << index_bits) - 1;
-
-        NumericIdType get_generation() const noexcept { return (_id >> index_bits) & GENERATION_MASK; }
-        NumericIdType get_index() const noexcept { return (_id & INDEX_MASK) - 1; }
-
-        friend bool operator==(Id a, Id b) noexcept { return a._id == b._id; }
-        friend bool operator!=(Id a, Id b) noexcept { return !(a == b); }
-
-        NumericIdType _id = 0;
-    };
-
-    static constexpr size_t MAX_ELEM_COUNT = static_cast<size_t>(
-        (static_cast<NumericIdType>(1) << index_bits) - 1); // Subtract 1 b/c index 0 is used for invalid id.
-
-    Pool(NumericIdType initial_capacity = 0, float growth_factor = 1.5);
-    Pool(const Pool &) = delete;
-    Pool &operator=(const Pool &) = delete;
-    ~Pool();
+    Pool(size_t min_alignment = 0);
 
     template <typename... Args>
-    Id emplace(Args &&... args);
+    ElemType *emplace(Args &&... args);
 
-    // I've tried turning the two insert overloads into one function
-    // using forward references, but it seemed to me to get unnecessarily
-    // convoluted and hard to maintain.
-    Id insert(ElementType &&elem);
-    Id insert(const ElementType &elem);
-
+    void remove(ElemType *);
     void clear();
-    bool remove(Id);
-
-    ElementType *lookup(Id);
-    const ElementType *lookup(Id) const;
-
-    bool empty() const;
-    size_t get_element_count() const;
-    size_t size() const { return get_element_count(); }
-
-    size_t get_capacity() const;
+    size_t size() const { return _element_count; }
+    bool empty() const { return _element_count == 0; }
 
 private:
-    struct PoolSlot
-    {
-        NumericIdType generation = 0;
-        bool holds_element = false;
-
-        // union: bad because it doesn't handle destructors.
-        // std::variant: how can we handle the case of ElementType being uint32_t,
-        // the same as its next-free-index variant type? std::variant only allows
-        // to query for the used element if the types are distinct.
-        // So I'm settling for this.. it's very low-level, but can be encapsulated
-        // nicely here.
-        std::array<uint8_t, (sizeof(ElementType) > sizeof(size_t) ? sizeof(ElementType) : sizeof(size_t))> data;
-
-        size_t &as_next_free_index()
-        {
-            JAWS_ASSUME(!holds_element);
-            return *reinterpret_cast<size_t *>(data.data());
-        }
-
-        ElementType *as_element()
-        {
-            JAWS_ASSUME(holds_element);
-            return reinterpret_cast<ElementType *>(data.data());
-        }
-
-        const ElementType *as_element() const
-        {
-            JAWS_ASSUME(holds_element);
-            return reinterpret_cast<const ElementType *>(data.data());
-        }
-
-        PoolSlot() = default;
-        ~PoolSlot() { cleanup(); }
-        PoolSlot(const PoolSlot &) = delete;
-        PoolSlot &operator=(const PoolSlot &) = delete;
-        PoolSlot(PoolSlot &&) = default;
-        PoolSlot &operator=(PoolSlot &&) = default;
-
-        void cleanup()
-        {
-            if (holds_element) { as_element()->~ElementType(); }
-            holds_element = 0;
-        }
-    };
-
-    // Returns the index or 0 if not possible.
-    size_t alloc_pool_slot();
-
+    std::vector<ElemType *> _free_slots;
+    std::vector<std::unique_ptr<ElemType[]>> _memory_pages;
+    size_t _min_alignment = 0;
     size_t _element_count = 0;
-    float _growth_factor = 1.5f;
-    size_t _first_free_elem = -1;
-    std::vector<PoolSlot> _pool_slots;
 };
 
+
+template <typename ElemType>
+Pool<ElemType>::Pool(size_t min_alignment) : _min_alignment(min_alignment)
+{}
+
+
+template <typename ElemType>
+template <typename... Args>
+ElemType *Pool<ElemType>::emplace(Args &&... args)
+{
+    if (_free_slots.empty()) {
+        // Grow the vector by 50% its current size
+        const size_t num_added = empty() ? 32 : _element_count / 2;
+        //_memory_pages.push_back(std::make_unique<ElemType[]>(new ElemType[num_added]));
+        _memory_pages.emplace_back(new ElemType[num_added]);
+
+        // Add newly aquired slots to free list
+        _free_slots.reserve(_free_slots.size() + num_added);
+        ElemType *ptr = _memory_pages.back().get();
+        for (size_t i = 0; i < num_added; ++i) { _free_slots.push_back(ptr++); }
+    }
+    ElemType *result_ptr = _free_slots.back();
+    _free_slots.pop_back();
+    new (result_ptr) ElemType(std::forward<Args>(args)...);
+    ++_element_count;
+    return result_ptr;
 }
 
-#include "pool.inl"
+
+template <typename ElemType>
+void Pool<ElemType>::remove(ElemType *ptr)
+{
+    ptr->~ElemType();
+    _free_slots.push_back(ptr);
+}
+
+
+template <typename ElemType>
+void Pool<ElemType>::clear()
+{
+    // Actually drop the reserved elements here.
+    _memory_pages.swap(std::vector<std::unique_ptr<ElemType[]>>{});
+    _free_slots.swap(std::vector<ElemType *>{});
+    _element_count = 0;
+}
+
+
+}
