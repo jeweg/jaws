@@ -39,10 +39,10 @@ Those were tangents for sure, but I wasn't trying to get quickly to any particul
 * Headless and compute-only working
 * Abstract WSI/swapchain render loop so we we're not limited to rendering into a surface
 * Descriptor set layouts generated from the spirv-cross reflection data
-* A limited lifetime concept similar to frame context in [Granite](https://github.com/Themaister/Granite)
+* A chunked lifetime concept similar to frame context in [Granite](https://github.com/Themaister/Granite)
 * Shader reloading in action
 * More object types generated internally on demand and cached (pipelines and friends!)
 * Integration of [Dear ImGui](https://github.com/ocornut/imgui), [RenderDoc](https://renderdoc.org/), [Fossilize](https://github.com/ValveSoftware/Fossilize) 
 
 And of course, and hopefully along the way towards the above...
-* Actually render something nice
+* Actually render something nice.
