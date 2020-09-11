@@ -92,7 +92,9 @@ std::string queue_family_properties_to_string(const Device &device)
             caps_strs.emplace_back("Transfer");
         }
         if (auto cb = device.get_context()->get_presentation_support_callback()) {
-            if (cb(device.get_instance(), device.get_physical_device(), i)) { caps_strs.emplace_back("Present"); }
+            if (cb(device.get_context()->get_instance(), device.get_physical_device(), i)) {
+                caps_strs.emplace_back("Present");
+            }
         }
         sb.append_format("[{}/{}]: {}", i, total, absl::StrJoin(caps_strs, ", "));
     }
