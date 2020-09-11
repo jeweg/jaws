@@ -115,6 +115,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(src_root
+    README.md
     include/jaws/jaws.hpp
     include/jaws/core.hpp
     include/jaws/windows.hpp
