@@ -1,11 +1,14 @@
 #pragma once
 #include "jaws/util/hashing.hpp"
 #include "absl/container/flat_hash_map.h"
+#include "jaws/util/misc.hpp"
 #include <list>
 #include <limits>
 
 namespace jaws::util {
 
+// LRU cache w/ pointer stability and optional deleter observer.
+// which, if set, gets called before, not instead of, the destructor.
 template <
     typename Key,
     typename Value,
@@ -27,9 +30,22 @@ private:
         Element(const Element &) = delete;
         Element &operator=(const Element &) = delete;
 
-        template <typename K, typename V>
-        Element(uint32_t access_time, K &&key, V &&value) :
-            access_time(access_time), key(std::forward<K>(key)), value(std::forward<V>(value))
+        Element(uint32_t access_time, const Key &key, const Value &value) :
+            access_time(access_time), key(key), value(value)
+        {}
+
+        Element(uint32_t access_time, const Key &key, Value &&value) :
+            access_time(access_time), key(key), value(forward_to_move_or_copy<Value>(std::move(value)))
+        {}
+
+        struct DummyTag
+        {};
+
+        // We use the tag type here to avoid ambiguous constructor overloads
+        // when Args is just Value.
+        template <typename... Args>
+        Element(DummyTag, uint32_t access_time, const Key &key, Args &&... args) :
+            access_time(access_time), key(key), value(std::forward<Args>(args)...)
         {}
 
         uint32_t access_time = 0;
@@ -44,30 +60,63 @@ private:
     using ListIter = typename std::list<Element>::iterator;
     mutable absl::flat_hash_map<Key, ListIter, Hash, Eq> _hash_map;
 
-    struct AbstractDeleter
+    // Base class for type erasure.
+    struct AbstractDeleteObserver
     {
-        virtual ~AbstractDeleter() = default;
-        virtual void del(const Key &, Value &) = 0;
+        virtual ~AbstractDeleteObserver() = default;
+        virtual void about_to_delete(const Key &, Value &) = 0;
     };
-    template <typename Deleter>
-    struct ConcreteDeleter final : AbstractDeleter
+    template <typename Func>
+    struct DeleteObserver final : AbstractDeleteObserver
     {
-        Deleter deleter;
-        ConcreteDeleter(Deleter deleter) : deleter(deleter) {}
-        void del(const Key &key, Value &value) override { deleter(key, value); }
+        DeleteObserver(Func func) : func(func) {}
+        void about_to_delete(const Key &key, Value &value) override { func(key, value); }
+
+        Func func;
     };
     // Type-erased deleter
-    AbstractDeleter *_deleter = nullptr;
+    AbstractDeleteObserver *_delete_observer = nullptr;
+
+    // Updating an existing entry or inserting a new entry is almost identical
+    // in the overloads, except for how they pass arguments or do the value updating.
+    // We let the overloads express only those differences by using this common
+    // function with two customization points.
+    template <typename UpdateFunc, typename InsertFunc>
+    Value *UpdateOrInsert(const Key &key, UpdateFunc ufunc, InsertFunc ifunc)
+    {
+        auto iter = _hash_map.find(key);
+        if (iter != _hash_map.end()) {
+            // Key exists. We override the value and move the element to the end of the list.
+            // Note that this can't change the number of elements in the cache.
+            iter->second->access_time = _clock;
+            ufunc(iter->second->value);
+            _lru_list.splice(_lru_list.end(), _lru_list, iter->second);
+            return &iter->second->value;
+        } else {
+            // Insert new element.
+            ifunc();
+            _hash_map.insert(std::make_pair(key, --_lru_list.end()));
+            purge(_max_elem_count, _max_age);
+            // TODO: purging right away what we just inserted probably indicates a problem, though.
+            // Let's assume on it for now.
+            JAWS_ASSUME(!_lru_list.empty());
+            if (_lru_list.empty()) {
+                return nullptr;
+            } else {
+                return &_lru_list.back().value;
+            }
+        }
+    }
 
 public:
     explicit LruCache(int max_elem_count = -1, int max_age = -1) : _max_elem_count(max_elem_count), _max_age(max_age) {}
 
-    template <typename Deleter>
-    explicit LruCache(Deleter deleter, int max_elem_count = -1, int max_age = -1) :
-        _deleter(new ConcreteDeleter(deleter)), _max_elem_count(max_elem_count), _max_age(max_age)
+    template <typename DeleteObserverFunc>
+    explicit LruCache(DeleteObserverFunc delete_observer, int max_elem_count = -1, int max_age = -1) :
+        _delete_observer(new DeleteObserver(delete_observer)), _max_elem_count(max_elem_count), _max_age(max_age)
     {}
 
-    ~LruCache() { delete _deleter; }
+    ~LruCache() { delete _delete_observer; }
 
 
     void advance_clock()
@@ -78,24 +127,33 @@ public:
         purge(_max_elem_count, _max_age);
     }
 
-    template <typename K, typename V>
-    void insert(K &&key, V &&value)
+
+    Value *insert(const Key &key, const Value &value)
     {
-        auto iter = _hash_map.find(key);
-        if (iter != _hash_map.end()) {
-            // Key exists. We override the value and move
-            // the element to the end of the list.
-            // Note that this can't change the number of elements in the cache.
-            iter->second->access_time = _clock;
-            _lru_list.splice(_lru_list.end(), _lru_list, iter->second);
-        } else {
-            // Insert new element.
-            // Move (if forwarding ref allows it) key and value at their latest
-            // occurence in the function.
-            _lru_list.emplace_back(_clock, key, std::forward<V>(value));
-            _hash_map.insert(std::make_pair(std::forward<K>(key), --_lru_list.end()));
-            purge(_max_elem_count, _max_age);
-        }
+        return UpdateOrInsert(
+            key, [&](Value &val) { val = value; }, [&]() { _lru_list.emplace_back(_clock, key, value); });
+    }
+
+
+    Value *insert(const Key &key, Value &&value)
+    {
+        return UpdateOrInsert(
+            key,
+            [&](Value &val) { val = forward_to_move_or_copy<Value>(std::move(value)); },
+            [&]() { _lru_list.emplace_back(_clock, key, std::move(value)); });
+    }
+
+    template <typename... Args>
+    Value *emplace(const Key &key, Args &&... args)
+    {
+        return UpdateOrInsert(
+            key,
+            [&](Value &val) {
+                // Manual delete and placement new here makes the least amount of assumptions about Value
+                val.~Value();
+                new (&val) Value(std::forward<Args>(args)...);
+            },
+            [&]() { _lru_list.emplace_back(Element::DummyTag{}, _clock, key, std::forward<Args>(args)...); });
     }
 
 
@@ -114,7 +172,7 @@ public:
 
     Value *lookup(const Key &key) { return const_cast<Value *>(const_cast<const LruCache *>(this)->lookup(key)); }
 
-    // Does lookup. If it found a value, it calls the specified functor
+    // Does a lookup. Then, if it found a value, it calls the specified functor
     // with signature (const Key&, Value&). If the functor returns true,
     // the element is erased from the cache directly and this function
     // returns nullptr. It's meant for cases where we have extra information
@@ -128,7 +186,7 @@ public:
         auto iter = _hash_map.find(key);
         if (iter != _hash_map.end()) {
             if (remove_classifier_func(key, iter->second->value)) {
-                if (_deleter) { _deleter->del(iter->second->key, iter->second->value); }
+                if (_delete_observer) { _delete_observer->del(iter->second->key, iter->second->value); }
                 _lru_list.erase(iter->second);
                 _hash_map.erase(iter);
                 return nullptr;
@@ -153,7 +211,7 @@ public:
     {
         auto iter = _hash_map.find(key);
         if (iter == _hash_map.end()) { return false; }
-        if (_deleter) { _deleter->del(key, iter->second.value); }
+        if (_delete_observer) { _delete_observer->del(key, iter->second.value); }
         _lru_list.erase(iter->second);
         _hash_map.erase(iter);
     }
@@ -192,7 +250,7 @@ public:
                 if (age > max_age) { erase_this = true; }
             }
             if (erase_this) {
-                if (_deleter) { _deleter->del(erase_iter->key, erase_iter->value); }
+                if (_delete_observer) { _delete_observer->about_to_delete(erase_iter->key, erase_iter->value); }
                 _hash_map.erase(erase_iter->key);
                 --size;
                 ++erase_iter;
@@ -205,9 +263,9 @@ public:
 
     void clear()
     {
-        if (_deleter) {
+        if (_delete_observer) {
             for (auto iter = _lru_list.begin(), end_iter = _lru_list.end(); iter != end_iter; ++iter) {
-                _deleter->del(iter->key, iter->value);
+                _delete_observer->about_to_delete(iter->key, iter->value);
             }
         }
         _lru_list.clear();
