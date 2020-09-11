@@ -8,6 +8,7 @@
 namespace jaws::vulkan {
 
 // TODO: a bit too low-level probably => err on the low-level side for now.
+// We will probably use this only internally later on. Not there yet, though.
 struct FramebufferCreateInfo
 {
     uint32_t width = 0;

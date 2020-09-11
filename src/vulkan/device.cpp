@@ -4,7 +4,6 @@
 #include "jaws/util/enumerate_range.hpp"
 #include "jaws/vulkan/shader_system.hpp"
 #include "jaws/vulkan/vulkan.hpp"
-#include "framebuffer_cache.hpp"
 
 namespace jaws::vulkan {
 
@@ -154,9 +153,9 @@ void Device::create(Context *context, const CreateInfo &ci)
             if ((~bits & unwanted_caps) != unwanted_caps) { continue; }
             return i;
         }
-        return INVALID_INDEX;
+        return -1;
     };
-    auto is_queue_invalid = [this](Queue q) { return get_queue_info(q).family_index == INVALID_INDEX; };
+    auto is_queue_invalid = [this](Queue q) { return get_queue_info(q).family_index == -1; };
 
     // Find async compute queue family, as exclusive as possible.
     get_queue_info(Queue::AsyncCompute).family_index =
@@ -192,18 +191,16 @@ void Device::create(Context *context, const CreateInfo &ci)
     uint32_t fam_index;
     if ((fam_index =
              find_family(FamilyBit::Graphics | FamilyBit::Compute | FamilyBit::Present | FamilyBit::Transfer, 0))
-        != INVALID_INDEX) {
+        != -1) {
         get_queue_info(Queue::Graphics).family_index = fam_index;
         get_queue_info(Queue::Compute).family_index = fam_index;
         get_queue_info(Queue::Present).family_index = fam_index;
         get_queue_info(Queue::Transfer).family_index = fam_index;
-    } else if (
-        (fam_index = find_family(FamilyBit::Graphics | FamilyBit::Present | FamilyBit::Transfer, 0)) != INVALID_INDEX) {
+    } else if ((fam_index = find_family(FamilyBit::Graphics | FamilyBit::Present | FamilyBit::Transfer, 0)) != -1) {
         get_queue_info(Queue::Graphics).family_index = fam_index;
         get_queue_info(Queue::Present).family_index = fam_index;
         get_queue_info(Queue::Transfer).family_index = fam_index;
-    } else if (
-        (fam_index = find_family(FamilyBit::Graphics | FamilyBit::Compute | FamilyBit::Transfer, 0)) != INVALID_INDEX) {
+    } else if ((fam_index = find_family(FamilyBit::Graphics | FamilyBit::Compute | FamilyBit::Transfer, 0)) != -1) {
         get_queue_info(Queue::Graphics).family_index = fam_index;
         get_queue_info(Queue::Compute).family_index = fam_index;
         get_queue_info(Queue::Transfer).family_index = fam_index;
@@ -224,10 +221,8 @@ void Device::create(Context *context, const CreateInfo &ci)
     }
 
     if (is_queue_invalid(Queue::Graphics)) { JAWS_FATAL1("No graphics queue family found"); }
-    if (!_context->is_headless()) {
-        if (get_queue_info(Queue::Present).family_index == INVALID_INDEX) {
-            JAWS_FATAL1("No present queue family found");
-        }
+    if (!_context->is_headless() && get_queue_info(Queue::Present).family_index == -1) {
+        JAWS_FATAL1("No present queue family found");
     }
     if (is_queue_invalid(Queue::Compute)) { JAWS_FATAL1("No compute queue family found"); }
     if (is_queue_invalid(Queue::Transfer)) { JAWS_FATAL1("No transfer queue family found"); }
@@ -239,7 +234,6 @@ void Device::create(Context *context, const CreateInfo &ci)
     if (is_queue_invalid(Queue::AsyncTransfer)) {
         get_queue_info(Queue::AsyncTransfer).family_index = get_queue_info(Queue::Transfer).family_index;
     }
-
 
     logger.info("selected queue families:");
     logger.info("    graphics: {}", get_queue_info(Queue::Graphics).family_index);
@@ -311,19 +305,7 @@ void Device::create(Context *context, const CreateInfo &ci)
 
     //=========================================================================
 
-    volkLoadDeviceTable(&_f, _vk_device);
-
-    //=========================================================================
-    // Retrieve queue objects. We need them later.
-
-    _unique_queues.assign(queue_cis.size(), VK_NULL_HANDLE);
-    for (const auto &[i, qci] : jaws::util::enumerate_range(queue_cis)) {
-        _f.vkGetDeviceQueue(_vk_device, qci.queueFamilyIndex, 0, &_unique_queues[i]);
-        // For each queue info using that family, set the unique queue index.
-        for (auto &qi : _queue_infos) {
-            if (qi.family_index == qci.queueFamilyIndex) { qi.unique_queue_index = i; }
-        }
-    }
+    volkLoadDeviceTable(&_vk_func_table, _vk_device);
 
     //=========================================================================
     // Init vulkan memory allocator
@@ -331,25 +313,25 @@ void Device::create(Context *context, const CreateInfo &ci)
     _vma_vulkan_functions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
     _vma_vulkan_functions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
 
-    _vma_vulkan_functions.vkAllocateMemory = _f.vkAllocateMemory;
-    _vma_vulkan_functions.vkAllocateMemory = _f.vkAllocateMemory;
-    _vma_vulkan_functions.vkFreeMemory = _f.vkFreeMemory;
-    _vma_vulkan_functions.vkMapMemory = _f.vkMapMemory;
-    _vma_vulkan_functions.vkUnmapMemory = _f.vkUnmapMemory;
-    _vma_vulkan_functions.vkFlushMappedMemoryRanges = _f.vkFlushMappedMemoryRanges;
-    _vma_vulkan_functions.vkInvalidateMappedMemoryRanges = _f.vkInvalidateMappedMemoryRanges;
-    _vma_vulkan_functions.vkBindBufferMemory = _f.vkBindBufferMemory;
-    _vma_vulkan_functions.vkBindImageMemory = _f.vkBindImageMemory;
-    _vma_vulkan_functions.vkGetBufferMemoryRequirements = _f.vkGetBufferMemoryRequirements;
-    _vma_vulkan_functions.vkGetImageMemoryRequirements = _f.vkGetImageMemoryRequirements;
-    _vma_vulkan_functions.vkCreateBuffer = _f.vkCreateBuffer;
-    _vma_vulkan_functions.vkDestroyBuffer = _f.vkDestroyBuffer;
-    _vma_vulkan_functions.vkCreateImage = _f.vkCreateImage;
-    _vma_vulkan_functions.vkDestroyImage = _f.vkDestroyImage;
-    _vma_vulkan_functions.vkCmdCopyBuffer = _f.vkCmdCopyBuffer;
+    _vma_vulkan_functions.vkAllocateMemory = _vk_func_table.vkAllocateMemory;
+    _vma_vulkan_functions.vkAllocateMemory = _vk_func_table.vkAllocateMemory;
+    _vma_vulkan_functions.vkFreeMemory = _vk_func_table.vkFreeMemory;
+    _vma_vulkan_functions.vkMapMemory = _vk_func_table.vkMapMemory;
+    _vma_vulkan_functions.vkUnmapMemory = _vk_func_table.vkUnmapMemory;
+    _vma_vulkan_functions.vkFlushMappedMemoryRanges = _vk_func_table.vkFlushMappedMemoryRanges;
+    _vma_vulkan_functions.vkInvalidateMappedMemoryRanges = _vk_func_table.vkInvalidateMappedMemoryRanges;
+    _vma_vulkan_functions.vkBindBufferMemory = _vk_func_table.vkBindBufferMemory;
+    _vma_vulkan_functions.vkBindImageMemory = _vk_func_table.vkBindImageMemory;
+    _vma_vulkan_functions.vkGetBufferMemoryRequirements = _vk_func_table.vkGetBufferMemoryRequirements;
+    _vma_vulkan_functions.vkGetImageMemoryRequirements = _vk_func_table.vkGetImageMemoryRequirements;
+    _vma_vulkan_functions.vkCreateBuffer = _vk_func_table.vkCreateBuffer;
+    _vma_vulkan_functions.vkDestroyBuffer = _vk_func_table.vkDestroyBuffer;
+    _vma_vulkan_functions.vkCreateImage = _vk_func_table.vkCreateImage;
+    _vma_vulkan_functions.vkDestroyImage = _vk_func_table.vkDestroyImage;
+    _vma_vulkan_functions.vkCmdCopyBuffer = _vk_func_table.vkCmdCopyBuffer;
 #if VMA_DEDICATED_ALLOCATION
-    _vma_vulkan_functions.vkGetBufferMemoryRequirements2KHR = _f.vkGetBufferMemoryRequirements2KHR;
-    _vma_vulkan_functions.vkGetImageMemoryRequirements2KHR = _f.vkGetImageMemoryRequirements2KHR;
+    _vma_vulkan_functions.vkGetBufferMemoryRequirements2KHR = _vk_func_table.vkGetBufferMemoryRequirements2KHR;
+    _vma_vulkan_functions.vkGetImageMemoryRequirements2KHR = _vk_func_table.vkGetImageMemoryRequirements2KHR;
 #endif
     VmaAllocatorCreateInfo allocator_info = {};
     allocator_info.physicalDevice = physical_device;
@@ -357,28 +339,6 @@ void Device::create(Context *context, const CreateInfo &ci)
     allocator_info.pVulkanFunctions = &_vma_vulkan_functions;
     if (vma_can_use_dedicated_alloc) { allocator_info.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT; }
     vmaCreateAllocator(&allocator_info, &_vma_allocator);
-
-#if 0
-    // Let's test this.
-    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.size = 65536;
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    result = vmaCreateBuffer(_vma_allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
-    JAWS_VK_HANDLE_FATAL(result);
-
-    vmaDestroyBuffer(_vma_allocator, buffer, allocation);
-#endif
-
-    /*
-    _sediment = std::make_unique<Sediment>();
-    _sediment->create(this);
-    */
 }
 
 
@@ -389,7 +349,7 @@ void Device::destroy()
         _buffer_pool.clear();
         _image_pool.clear();
         vmaDestroyAllocator(_vma_allocator);
-        _f.vkDestroyDevice(_vk_device, nullptr);
+        _vk_func_table.vkDestroyDevice(_vk_device, nullptr);
         _vk_device = VK_NULL_HANDLE;
     }
 }
@@ -398,7 +358,24 @@ void Device::destroy()
 void Device::wait_idle()
 {
     JAWS_ASSUME(_vk_device);
-    JAWS_VK_HANDLE_FATAL(vkDeviceWaitIdle(_vk_device));
+    JAWS_VK_HANDLE_FATAL(_vk_func_table.vkDeviceWaitIdle(_vk_device));
+}
+
+
+VkQueue Device::get_queue(Queue queue)
+{
+    // Create VkQueues on demand
+    auto &qi = get_queue_info(queue);
+    if (!qi.vk_queue) {
+        // Create a queue in that family and store it in all QueueInfos
+        // also using this family.
+        _vk_func_table.vkGetDeviceQueue(_vk_device, qi.family_index, 0, &qi.vk_queue);
+
+        for (auto &other_qi : _queue_infos) {
+            if (other_qi.family_index == qi.family_index) { other_qi.vk_queue = qi.vk_queue; }
+        }
+    }
+    return qi.vk_queue;
 }
 
 
@@ -412,55 +389,50 @@ Shader Device::get_shader(const ShaderCreateInfo &ci)
 }
 
 
-BufferPool::Id Device::create_buffer(const VkBufferCreateInfo &ci, VmaMemoryUsage usage)
+Buffer
+Device::create(const VkBufferCreateInfo &ci, VmaMemoryUsage usage, bool map_persistently, const void *intial_data)
 {
-    return _buffer_pool.emplace(this, ci, usage);
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = usage;
+    if (map_persistently) { alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT; }
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VmaAllocation vma_allocation = VK_NULL_HANDLE;
+    VkResult result = vmaCreateBuffer(_vma_allocator, &ci, &alloc_info, &buffer, &vma_allocation, nullptr);
+    JAWS_VK_HANDLE_FATAL(result);
+    return Buffer(_buffer_pool.emplace(this, buffer, vma_allocation));
 }
 
 
-ImagePool::Id Device::create_image(const VkImageCreateInfo &ci, VmaMemoryUsage usage)
+Image Device::create(const VkImageCreateInfo &ci, VmaMemoryUsage usage, bool map_persistently, const void *intial_data)
 {
-    return _image_pool.emplace(this, ci, usage);
-}
-
-
-Buffer *Device::get_buffer(BufferPool::Id id)
-{
-    return _buffer_pool.lookup(id);
-}
-
-
-Image *Device::get_image(ImagePool::Id id)
-{
-    return _image_pool.lookup(id);
-}
-
-
-void *Device::map_buffer(BufferPool::Id id)
-{
-    Buffer *b = get_buffer(id);
-    JAWS_ASSUME(b);
-    void *ptr = nullptr;
-    vmaMapMemory(_vma_allocator, b->vma_allocation, &ptr);
-    return ptr;
-}
-
-
-void Device::unmap_buffer(BufferPool::Id id)
-{
-    Buffer *b = get_buffer(id);
-    JAWS_ASSUME(b);
-    vmaUnmapMemory(_vma_allocator, b->vma_allocation);
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = usage;
+    if (map_persistently) { alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT; }
+    VkImage image = VK_NULL_HANDLE;
+    VmaAllocation vma_allocation = VK_NULL_HANDLE;
+    VkResult result = vmaCreateImage(_vma_allocator, &ci, &alloc_info, &image, &vma_allocation, nullptr);
+    JAWS_VK_HANDLE_FATAL(result);
+    return Image(_image_pool.emplace(this, image, vma_allocation));
 }
 
 
 VkFramebuffer Device::get_framebuffer(const FramebufferCreateInfo &ci)
 {
-    if (!_framebuffer_cache) {
-        _framebuffer_cache = std::make_unique<FramebufferCache>();
-        _framebuffer_cache->create(this);
-    }
-    return _framebuffer_cache->get_framebuffer(ci);
+    if (VkFramebuffer *fb = _framebuffer_cache.lookup(ci)) { return *fb; }
+
+    VkFramebufferCreateInfo vci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+    vci.width = ci.width;
+    vci.height = ci.height;
+    vci.layers = ci.layers;
+    vci.renderPass = ci.render_pass;
+    vci.flags = ci.flags;
+    vci.attachmentCount = static_cast<uint32_t>(ci.attachments.size());
+    vci.pAttachments = *ci.attachments.data();
+
+    VkFramebuffer fb = VK_NULL_HANDLE;
+    VkResult result = vkCreateFramebuffer(vk_handle(), &vci, nullptr, &fb);
+    JAWS_VK_HANDLE_FATAL(result);
+    return *_framebuffer_cache.insert(ci, fb);
 }
 
 }
