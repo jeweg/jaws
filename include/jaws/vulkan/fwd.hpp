@@ -1,21 +1,28 @@
 #pragma once
-#include "jaws/util/Pool.hpp"
+
+#include "jaws/util/ref_ptr.hpp"
+#include "jaws/vfs/path.hpp"
+
+#include <tuple>
 
 namespace jaws::vulkan {
 
 class Context;
 class Device;
 class WindowContext;
-
-class ShaderSystem;
-struct ShaderCreateInfo;
-class Shader;
 class FramebufferCache;
 
-class Buffer;
-class Image;
+class BufferResource;
+using Buffer = jaws::util::ref_ptr<BufferResource>;
 
-using BufferPool = jaws::util::Pool<Buffer, uint64_t, 16, 32>;
-using ImagePool = jaws::util::Pool<Image, uint64_t, 16, 32>;
+class ImageResource;
+using Image = jaws::util::ref_ptr<ImageResource>;
+
+class ShaderResource;
+using Shader = jaws::util::ref_ptr<ShaderResource>;
+class ShaderSystem;
+struct ShaderCreateInfo;
+
+using FileWithFingerprint = std::tuple<jaws::vfs::Path, size_t>;
 
 }
