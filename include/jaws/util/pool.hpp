@@ -9,8 +9,6 @@ template <typename ElemType>
 class Pool
 {
 public:
-    Pool(size_t min_alignment = 0);
-
     template <typename... Args>
     ElemType *emplace(Args &&... args);
 
@@ -20,35 +18,39 @@ public:
     bool empty() const { return _element_count == 0; }
 
 private:
-    std::vector<ElemType *> _free_slots;
-    std::vector<std::unique_ptr<ElemType[]>> _memory_pages;
-    size_t _min_alignment = 0;
+    struct MemoryBlockDeleter
+    {
+        void operator()(ElemType *ptr) { ::operator delete(ptr); }
+    };
+
+    using FreeStack = std::vector<ElemType *>;
+    FreeStack _free_stack;
+    using MemoryBlock = std::unique_ptr<ElemType, MemoryBlockDeleter>;
+    using MemoryBlockList = std::vector<MemoryBlock>;
+    MemoryBlockList _memory_blocks;
     size_t _element_count = 0;
 };
-
-
-template <typename ElemType>
-Pool<ElemType>::Pool(size_t min_alignment) : _min_alignment(min_alignment)
-{}
 
 
 template <typename ElemType>
 template <typename... Args>
 ElemType *Pool<ElemType>::emplace(Args &&... args)
 {
-    if (_free_slots.empty()) {
+    if (_free_stack.empty()) {
         // Grow the vector by 50% its current size
         const size_t num_added = empty() ? 32 : _element_count / 2;
-        //_memory_pages.push_back(std::make_unique<ElemType[]>(new ElemType[num_added]));
-        _memory_pages.emplace_back(new ElemType[num_added]);
+
+        _memory_blocks.emplace_back(static_cast<ElemType *>(::operator new(sizeof(ElemType) * num_added)));
 
         // Add newly aquired slots to free list
-        _free_slots.reserve(_free_slots.size() + num_added);
-        ElemType *ptr = _memory_pages.back().get();
-        for (size_t i = 0; i < num_added; ++i) { _free_slots.push_back(ptr++); }
+        ElemType *ptr = static_cast<ElemType *>(_memory_blocks.back().get()) + num_added;
+        _free_stack.reserve(num_added);
+        // Add in inverse order so we fill the blocks up from their start. Eases debugging.
+        for (size_t i = 0; i < num_added; ++i) { _free_stack.push_back(--ptr); }
     }
-    ElemType *result_ptr = _free_slots.back();
-    _free_slots.pop_back();
+    ElemType *result_ptr = _free_stack.back();
+    _free_stack.pop_back();
+
     new (result_ptr) ElemType(std::forward<Args>(args)...);
     ++_element_count;
     return result_ptr;
@@ -59,18 +61,22 @@ template <typename ElemType>
 void Pool<ElemType>::remove(ElemType *ptr)
 {
     ptr->~ElemType();
-    _free_slots.push_back(ptr);
+    _free_stack.push_back(ptr);
+    --_element_count;
 }
 
 
 template <typename ElemType>
 void Pool<ElemType>::clear()
 {
-    // Actually drop the reserved elements here.
-    _memory_pages.swap(std::vector<std::unique_ptr<ElemType[]>>{});
-    _free_slots.swap(std::vector<ElemType *>{});
+    // If the emplaces/removes are not properly balanced, we cannot
+    // call destructors. We do not keep track of which slots in a memory block
+    // are currently used, at least not directly (it's the inverse of the free stack
+    // entries, but that's not trivially usable for destructor calls in a performant way.
+    JAWS_ASSUME(empty());
     _element_count = 0;
+    _memory_blocks.clear();
+    _free_stack.clear();
 }
-
 
 }
