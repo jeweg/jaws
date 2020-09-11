@@ -218,14 +218,14 @@ public:
 
     void purge() { purge(_max_elem_count, _max_age); }
 
-    void purge(int max_elem_count, int max_age)
+    void purge(uint32_t max_elem_count, uint32_t max_age)
     {
         if (max_age < 0) {
             if (max_elem_count < 0) {
                 // Disabled invalidation policies.
                 return;
             }
-            if (get_size() <= max_elem_count) {
+            if (size() <= max_elem_count) {
                 // Haven't reached critical size yet.
                 return;
             }
@@ -236,11 +236,11 @@ public:
         // erasing from the list is delayed until the end because erasing the
         // full range should be slightly more efficient.
         ListIter erase_iter = _lru_list.begin();
-        int size = get_size();
+        size_t reduced_size = size();
         for (;;) {
             if (erase_iter == _lru_list.end()) { break; }
             bool erase_this = false;
-            if (max_elem_count >= 0 && size > max_elem_count) {
+            if (max_elem_count >= 0 && reduced_size > max_elem_count) {
                 erase_this = true;
             } else if (max_age >= 0) {
                 uint32_t at = erase_iter->access_time;
@@ -252,7 +252,7 @@ public:
             if (erase_this) {
                 if (_delete_observer) { _delete_observer->about_to_delete(erase_iter->key, erase_iter->value); }
                 _hash_map.erase(erase_iter->key);
-                --size;
+                --reduced_size;
                 ++erase_iter;
             } else {
                 break;
@@ -274,7 +274,6 @@ public:
 
     bool empty() const { return _hash_map.empty(); }
     size_t size() const { return _hash_map.size(); }
-    int get_size() const { return static_cast<int>(size()); }
 };
 
 
