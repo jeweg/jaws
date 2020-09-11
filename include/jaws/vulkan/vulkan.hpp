@@ -35,8 +35,6 @@
 
 namespace jaws::vulkan {
 
-constexpr uint32_t INVALID_INDEX = std::numeric_limits<uint32_t>::max();
-
 // The logic is modelled after similar code in Khronos' vulkan.hpp.
 // Note that in almost all vkEnumerate... style functions the count and output data always seem to
 // be the last two parameters. We use that fact here.
@@ -47,7 +45,7 @@ std::vector<ElemType> enumerated(FuncPtrType func_ptr, ElemType elem_prototype, 
 {
     VkResult result;
     std::vector<ElemType> result_list;
-    uint32_t count = std::numeric_limits<uint32_t>::max();
+    uint32_t count = -1;
     do {
         result = func_ptr(first_args..., &count, nullptr);
         JAWS_VK_HANDLE_RETURN(result, result_list);
