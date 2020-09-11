@@ -4,7 +4,7 @@ endif()
 
 find_package(glfw3 CONFIG REQUIRED)
 
-set(project_name "jaws-example-vulkan2")
+set(project_name "jaws-example-vulkan-x")
 project(${project_name} LANGUAGES CXX)
 add_jaws_executable(examples ${project_name}
 	main.cpp

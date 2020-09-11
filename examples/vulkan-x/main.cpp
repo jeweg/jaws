@@ -115,16 +115,15 @@ int main(int argc, char **argv)
         // This is what we'll put into the buffer:
         glm::mat4 mvpc = clip * projection * view * model;
 
-        jaws::vulkan::BufferPool::Id uniform_buffer_id;
+        jaws::vulkan::Buffer uniform_buffer;
         {
             VkBufferCreateInfo ci = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
             ci.size = sizeof(mvpc);
             ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-            uniform_buffer_id = device.create_buffer(ci, VMA_MEMORY_USAGE_CPU_TO_GPU);
+            uniform_buffer = device.create(ci, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-            void *ptr = device.map_buffer(uniform_buffer_id);
-            memcpy(ptr, glm::value_ptr(mvpc), sizeof(mvpc));
-            device.unmap_buffer(uniform_buffer_id);
+            auto mapped = uniform_buffer->map();
+            memcpy(mapped.data(), glm::value_ptr(mvpc), sizeof(mvpc));
         }
 
         //----------------------------------------------------------------------
@@ -264,14 +263,14 @@ int main(int argc, char **argv)
             {
                 VkPipelineShaderStageCreateInfo ci = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
                 ci.stage = VK_SHADER_STAGE_VERTEX_BIT;
-                ci.module = vertex_shader.vk_handle();
+                ci.module = vertex_shader->vk_handle();
                 ci.pName = "main";
                 pipeline_shader_stages.push_back(std::move(ci));
             }
             {
                 VkPipelineShaderStageCreateInfo ci = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
                 ci.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-                ci.module = fragment_shader.vk_handle();
+                ci.module = fragment_shader->vk_handle();
                 ci.pName = "main";
                 pipeline_shader_stages.push_back(std::move(ci));
             }

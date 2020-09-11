@@ -136,13 +136,13 @@ set(src_vulkan
     include/jaws/vulkan/window_context.hpp
     include/jaws/vulkan/device.hpp
     include/jaws/vulkan/utils.hpp
+    include/jaws/vulkan/shader_resource.hpp
     include/jaws/vulkan/shader_system.hpp
-    include/jaws/vulkan/shader.hpp
     include/jaws/vulkan/extension.hpp
-    include/jaws/vulkan/buffer.hpp
-    include/jaws/vulkan/image.hpp
+    include/jaws/vulkan/buffer_resource.hpp
+    include/jaws/vulkan/image_resource.hpp
     include/jaws/vulkan/framebuffer.hpp
-    #include/jaws/vulkan/sediment.hpp
+    include/jaws/vulkan/map_guard.hpp
     src/vulkan/context.cpp
     src/vulkan/window_context.cpp
     src/vulkan/device.cpp
@@ -150,17 +150,15 @@ set(src_vulkan
     src/vulkan/vulkan.cpp
     src/vulkan/to_string.cpp
     src/vulkan/to_string.hpp
-    src/vulkan/framebuffer_cache.hpp
-    src/vulkan/framebuffer_cache.cpp
+    src/vulkan/map_guard.cpp
+    src/vulkan/shader_resource.cpp
     src/vulkan/shader_system.cpp
     src/vulkan/extension.cpp
-    src/vulkan/buffer.cpp
-    src/vulkan/image.cpp
-    #src/vulkan/sediment.cpp
+    src/vulkan/buffer_resource.cpp
+    src/vulkan/image_resource.cpp
 )
 set(src_util
     include/jaws/util/pool.hpp
-    include/jaws/util/pool.inl
     include/jaws/util/indenting_ostream.hpp
     src/util/indenting_ostream.cpp
     include/jaws/util/indentation.hpp
